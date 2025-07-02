@@ -16,6 +16,11 @@ export default function PublicFooter() {
               Privacy
             </Link>
           </div>
+           <div className="pb-6">
+            <Link href="/disclaimer" className="text-sm leading-6 text-muted-foreground hover:text-primary">
+              Disclaimer
+            </Link>
+          </div>
           <div className="pb-6">
             <a href="mailto:mastermindankur@duck.com" className="text-sm leading-6 text-muted-foreground hover:text-primary">
               Contact

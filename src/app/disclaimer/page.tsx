@@ -23,7 +23,6 @@ export default function DisclaimerPage() {
             <h2 className="text-2xl font-bold tracking-tight text-foreground pt-6">External Links Disclaimer</h2>
             <p>The site may contain (or you may be sent through the site) links to other websites or content belonging to or originating from third parties. Such external links are not investigated, monitored, or checked for accuracy, adequacy, validity, reliability, availability, or completeness by us.</p>
             
-            <p className="pt-6 font-bold text-foreground">This is a placeholder disclaimer. You should replace this with your own disclaimer, especially if you handle sensitive user data.</p>
           </div>
         </div>
       </main>
