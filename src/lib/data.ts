@@ -1,0 +1,55 @@
+import type { Warranty } from './types';
+
+export const mockWarranties: Warranty[] = [
+  {
+    id: '1',
+    productName: 'ProBook Laptop 15"',
+    category: 'Electronics',
+    purchaseDate: new Date('2023-08-15'),
+    expiryDate: new Date('2025-08-14'),
+    invoiceImage: 'https://placehold.co/600x400.png',
+    warrantyCardImage: 'https://placehold.co/600x400.png',
+  },
+  {
+    id: '2',
+    productName: 'Smart Refrigerator',
+    category: 'Appliances',
+    purchaseDate: new Date('2022-12-01'),
+    expiryDate: new Date('2024-11-30'),
+    invoiceImage: 'https://placehold.co/600x400.png',
+  },
+  {
+    id: '3',
+    productName: 'Ergonomic Office Chair',
+    category: 'Furniture',
+    purchaseDate: new Date('2024-01-20'),
+    expiryDate: new Date('2029-01-19'),
+    warrantyCardImage: 'https://placehold.co/600x400.png',
+  },
+  {
+    id: '4',
+    productName: '4K Action Camera',
+    category: 'Electronics',
+    purchaseDate: new Date('2024-05-10'),
+    expiryDate: new Date('2025-05-09'),
+    invoiceImage: 'https://placehold.co/600x400.png',
+    warrantyCardImage: 'https://placehold.co/600x400.png',
+  },
+    {
+    id: '5',
+    productName: 'Espresso Machine',
+    category: 'Appliances',
+    purchaseDate: new Date('2024-06-01'),
+    expiryDate: new Date('2024-12-01'),
+    invoiceImage: 'https://placehold.co/600x400.png',
+  },
+  {
+    id: '6',
+    productName: 'Wireless Headphones',
+    category: 'Electronics',
+    purchaseDate: new Date('2023-03-01'),
+    expiryDate: new Date('2024-02-28'),
+    invoiceImage: 'https://placehold.co/600x400.png',
+    warrantyCardImage: 'https://placehold.co/600x400.png',
+  },
+];
