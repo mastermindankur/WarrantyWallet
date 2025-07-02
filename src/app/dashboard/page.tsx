@@ -4,7 +4,8 @@ import { useEffect, useState, Suspense } from 'react';
 import { collection, getDocs, query, Timestamp, where } from 'firebase/firestore';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
-import { Frown, PlusCircle, SortAsc, SortDesc } from 'lucide-react';
+import { Frown, PlusCircle, SortAsc, SortDesc, AlertTriangle } from 'lucide-react';
+import { isPast } from 'date-fns';
 
 import { useAuth } from '@/contexts/auth-context';
 import { db } from '@/lib/firebase';
@@ -18,7 +19,7 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
 function DashboardContent() {
   const [warranties, setWarranties] = useState<Warranty[]>([]);
-  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
+  const [sortOption, setSortOption] = useState<'asc' | 'desc' | 'expired'>('asc');
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const { user } = useAuth();
@@ -69,15 +70,54 @@ function DashboardContent() {
   }, [user]);
 
   const filteredAndSortedWarranties = [...warranties]
-    .filter(warranty => !selectedCategory || warranty.category === selectedCategory)
+    .filter(warranty => {
+      const categoryMatch = !selectedCategory || warranty.category === selectedCategory;
+      if (!categoryMatch) return false;
+
+      if (sortOption === 'expired') {
+        return isPast(warranty.expiryDate);
+      }
+      return true;
+    })
     .sort((a, b) => {
       const dateA = a.expiryDate.getTime();
       const dateB = b.expiryDate.getTime();
-      return sortOrder === 'asc' ? dateA - dateB : dateB - dateA;
+      if (sortOption === 'asc') {
+        return dateA - dateB;
+      }
+      // For 'desc' and 'expired', sort descending.
+      // For expired items, this means most recently expired first.
+      return dateB - dateA;
     });
 
   const handleWarrantyUpdate = () => {
     fetchWarranties();
+  };
+
+  const getPageSubtitle = () => {
+    if (sortOption === 'expired') {
+      if (selectedCategory) {
+        return `Viewing expired warranties in ${selectedCategory}`;
+      }
+      return 'Viewing all your expired warranties.';
+    }
+    if (selectedCategory) {
+      return `Viewing warranties in ${selectedCategory}`;
+    }
+    return 'An overview of all your product warranties.';
+  };
+
+  const getEmptyStateMessage = () => {
+    if (sortOption === 'expired') {
+      if (selectedCategory) {
+        return `No expired warranties found in the "${selectedCategory}" category.`;
+      }
+      return 'You have no expired warranties.';
+    }
+    if (selectedCategory) {
+      return `No warranties found in the "${selectedCategory}" category.`;
+    }
+    return 'No warranties match the current filters.';
   };
 
   const renderContent = () => {
@@ -124,7 +164,7 @@ function DashboardContent() {
                     <Frown className="h-12 w-12 text-muted-foreground" />
                 </div>
                 <h2 className="text-2xl font-semibold tracking-tight">No Warranties Found</h2>
-                <p className="text-muted-foreground">No warranties found in the "{selectedCategory}" category.</p>
+                <p className="text-muted-foreground">{getEmptyStateMessage()}</p>
                 <Link href="/dashboard">
                     <Button variant="outline" className="mt-4">View All Warranties</Button>
                 </Link>
@@ -147,12 +187,12 @@ function DashboardContent() {
         <div>
           <h1 className="text-3xl font-bold">Your Warranties</h1>
           <p className="text-muted-foreground">
-            {selectedCategory ? `Viewing ${selectedCategory}` : 'An overview of all your product warranties.'}
+            {getPageSubtitle()}
           </p>
         </div>
         {warranties.length > 0 && (
             <div className="flex items-center gap-2">
-            <Select value={sortOrder} onValueChange={(value: 'asc' | 'desc') => setSortOrder(value)}>
+            <Select value={sortOption} onValueChange={(value: 'asc' | 'desc' | 'expired') => setSortOption(value)}>
               <SelectTrigger className="w-[180px]">
                 <SelectValue placeholder="Sort by..." />
               </SelectTrigger>
@@ -165,6 +205,11 @@ function DashboardContent() {
                 <SelectItem value="desc">
                   <div className="flex items-center gap-2">
                     <SortDesc className="h-4 w-4" /> Expires Latest
+                  </div>
+                </SelectItem>
+                <SelectItem value="expired">
+                  <div className="flex items-center gap-2">
+                    <AlertTriangle className="h-4 w-4" /> Expired
                   </div>
                 </SelectItem>
               </SelectContent>
