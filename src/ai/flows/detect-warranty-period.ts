@@ -1,9 +1,9 @@
 'use server';
 
 /**
- * @fileOverview This file contains the Genkit flow for automatically determining the warranty period from an invoice using AI.
+ * @fileOverview This file contains the Genkit flow for automatically extracting warranty details from an invoice and/or warranty card using AI.
  *
- * - detectWarrantyPeriod - A function that initiates the warranty period detection process.
+ * - detectWarrantyPeriod - A function that initiates the warranty detail extraction process.
  * - DetectWarrantyPeriodInput - The input type for the detectWarrantyPeriod function.
  * - DetectWarrantyPeriodOutput - The return type for the detectWarrantyPeriod function.
  */
@@ -14,16 +14,26 @@ import {z} from 'genkit';
 const DetectWarrantyPeriodInputSchema = z.object({
   invoiceDataUri: z
     .string()
+    .optional()
     .describe(
-      'The invoice image as a data URI that must include a MIME type and use Base64 encoding. Expected format: \'data:<mimetype>;base64,<encoded_data>\'.' /* e: A data URI representing the invoice image. */
+      "The invoice image as a data URI that must include a MIME type and use Base64 encoding. Expected format: 'data:<mimetype>;base64,<encoded_data>'."
+    ),
+  warrantyCardDataUri: z
+    .string()
+    .optional()
+    .describe(
+      "The warranty card image as a data URI that must include a MIME type and use Base64 encoding. Expected format: 'data:<mimetype>;base64,<encoded_data>'."
     ),
   productDescription: z.string().describe('A description of the product purchased.'),
 });
 export type DetectWarrantyPeriodInput = z.infer<typeof DetectWarrantyPeriodInputSchema>;
 
 const DetectWarrantyPeriodOutputSchema = z.object({
+  purchaseDate: z.date().optional().describe('The detected purchase date.'),
+  expiryDate: z.date().optional().describe('The detected warranty expiry date.'),
   warrantyPeriodMonths: z
     .number()
+    .optional()
     .describe('The detected warranty period in months.'),
   confidenceScore: z
     .number()
@@ -46,15 +56,23 @@ const detectWarrantyPeriodPrompt = ai.definePrompt({
   name: 'detectWarrantyPeriodPrompt',
   input: {schema: DetectWarrantyPeriodInputSchema},
   output: {schema: DetectWarrantyPeriodOutputSchema},
-  prompt: `You are an AI assistant specialized in analyzing invoices and determining warranty periods for purchased products.
+  prompt: `You are an AI assistant specialized in analyzing invoices and warranty cards to extract key information.
 
-  Analyze the provided invoice image and product description to identify the warranty period in months. Provide a confidence score (0-1) indicating the reliability of your detection.
-  Also, provide a reasoning for your detection, highlighting the key information extracted from the invoice that led to your conclusion. Make sure to provide the warranty period in number of months.
+      Analyze the provided documents and product description to identify the purchase date, expiry date, and warranty period in months.
+      If you can determine the purchase date and warranty period, you can calculate the expiry date. If you find an explicit expiry date, use that.
+      Prioritize information from the warranty card if both documents are present and there's a conflict.
 
-  Product Description: {{{productDescription}}}
-  Invoice Image: {{media url=invoiceDataUri}}
-  Output in JSON format.
-  `,
+      Also, provide a confidence score (0-1) indicating the reliability of your detection and a brief reasoning for your conclusions, mentioning which document you used.
+      Output in JSON format.
+
+      Product Description: {{{productDescription}}}
+      {{#if invoiceDataUri}}
+      Invoice Image: {{media url=invoiceDataUri}}
+      {{/if}}
+      {{#if warrantyCardDataUri}}
+      Warranty Card Image: {{media url=warrantyCardDataUri}}
+      {{/if}}
+      `,
 });
 
 const detectWarrantyPeriodFlow = ai.defineFlow(

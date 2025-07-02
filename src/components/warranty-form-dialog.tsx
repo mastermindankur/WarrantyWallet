@@ -64,13 +64,14 @@ export function WarrantyFormDialog({ children, warranty, onSave }: WarrantyFormD
     },
   });
 
-  const handleInvoiceChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
+  const runAiExtraction = async (changedFieldName: 'invoice' | 'warrantyCard', files: FileList | null) => {
+    const file = files?.[0];
     if (!file) return;
 
     const productName = form.getValues('productName');
     if (!productName) {
       form.setError('productName', { type: 'manual', message: 'Please enter a product name first.' });
+      form.resetField(changedFieldName);
       return;
     }
 
@@ -79,19 +80,50 @@ export function WarrantyFormDialog({ children, warranty, onSave }: WarrantyFormD
     setAiReasoning(null);
 
     try {
-      const dataUri = await fileToDataUri(file);
-      
-      const [warrantyResult, shortWarrantyResult] = await Promise.all([
-        detectWarrantyPeriod({ invoiceDataUri: dataUri, productDescription: productName }),
-        warnShortWarranties({ invoiceDataUri: dataUri, productDescription: productName })
-      ]);
+      const invoiceFile = changedFieldName === 'invoice' ? file : form.getValues('invoice')?.[0];
+      const warrantyCardFile = changedFieldName === 'warrantyCard' ? file : form.getValues('warrantyCard')?.[0];
 
-      if (warrantyResult.warrantyPeriodMonths) {
+      const invoiceDataUri = invoiceFile ? await fileToDataUri(invoiceFile) : undefined;
+      const warrantyCardDataUri = warrantyCardFile ? await fileToDataUri(warrantyCardFile) : undefined;
+
+      if (!invoiceDataUri && !warrantyCardDataUri) {
+        setIsAiRunning(false);
+        return;
+      }
+
+      const [warrantyResult, shortWarrantyResult] = await Promise.all([
+        detectWarrantyPeriod({ invoiceDataUri, warrantyCardDataUri, productDescription: productName }),
+        warnShortWarranties({ invoiceDataUri, warrantyCardDataUri, productDescription: productName }),
+      ]);
+      
+      let reasoningParts: string[] = [];
+      let datesUpdated = false;
+
+      if (warrantyResult.purchaseDate) {
+        form.setValue('purchaseDate', warrantyResult.purchaseDate, { shouldValidate: true });
+        reasoningParts.push('AI detected the purchase date.');
+        datesUpdated = true;
+      }
+      if (warrantyResult.expiryDate) {
+        form.setValue('expiryDate', warrantyResult.expiryDate, { shouldValidate: true });
+        reasoningParts.push('AI detected the expiry date.');
+        datesUpdated = true;
+      }
+
+      if (!datesUpdated && warrantyResult.warrantyPeriodMonths) {
         const purchaseDate = form.getValues('purchaseDate');
         const newExpiryDate = addMonths(purchaseDate, warrantyResult.warrantyPeriodMonths);
         form.setValue('expiryDate', newExpiryDate, { shouldValidate: true });
-        setAiReasoning(`AI Suggestion: ${warrantyResult.reasoning} (Confidence: ${Math.round(warrantyResult.confidenceScore * 100)}%)`);
+        reasoningParts.push(`AI calculated expiry from a ${warrantyResult.warrantyPeriodMonths}-month warranty.`);
       }
+      
+      const confidenceText = `(Confidence: ${Math.round(warrantyResult.confidenceScore * 100)}%)`;
+      if (warrantyResult.reasoning) {
+        setAiReasoning(`${warrantyResult.reasoning} ${reasoningParts.join(' ')} ${confidenceText}`);
+      } else if (reasoningParts.length > 0) {
+        setAiReasoning(`${reasoningParts.join(' ')} ${confidenceText}`);
+      }
+
 
       if (shortWarrantyResult.isShortWarranty) {
         setAiWarning(shortWarrantyResult.warningMessage);
@@ -102,7 +134,7 @@ export function WarrantyFormDialog({ children, warranty, onSave }: WarrantyFormD
       toast({
         variant: 'destructive',
         title: 'AI Analysis Failed',
-        description: 'Could not analyze the invoice. Please set the expiry date manually.',
+        description: 'Could not analyze the document. Please set the dates manually.',
       });
     } finally {
       setIsAiRunning(false);
@@ -195,7 +227,7 @@ export function WarrantyFormDialog({ children, warranty, onSave }: WarrantyFormD
                           accept="image/*,.pdf"
                           onChange={(event) => {
                             field.onChange(event.target.files);
-                            handleInvoiceChange(event);
+                            runAiExtraction('invoice', event.target.files);
                           }}
                           className="pr-12"
                         />
@@ -221,14 +253,23 @@ export function WarrantyFormDialog({ children, warranty, onSave }: WarrantyFormD
                   <FormItem>
                     <FormLabel>Warranty Card (Optional)</FormLabel>
                     <FormControl>
-                      <Input
-                        {...rest}
-                        type="file"
-                        accept="image/*,.pdf"
-                        onChange={(event) => {
-                          field.onChange(event.target.files);
-                        }}
-                      />
+                     <div className="relative">
+                        <Input
+                          {...rest}
+                          type="file"
+                          accept="image/*,.pdf"
+                          onChange={(event) => {
+                            field.onChange(event.target.files);
+                            runAiExtraction('warrantyCard', event.target.files);
+                          }}
+                          className="pr-12"
+                        />
+                        {isAiRunning && (
+                          <div className="absolute inset-y-0 right-0 flex items-center pr-3">
+                            <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+                          </div>
+                        )}
+                      </div>
                     </FormControl>
                     <FormMessage />
                   </FormItem>

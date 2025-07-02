@@ -16,8 +16,15 @@ import {z} from 'genkit';
 const WarnShortWarrantiesInputSchema = z.object({
   invoiceDataUri: z
     .string()
+    .optional()
     .describe(
       "The invoice data as a data URI that must include a MIME type and use Base64 encoding. Expected format: 'data:<mimetype>;base64,<encoded_data>'."
+    ),
+    warrantyCardDataUri: z
+    .string()
+    .optional()
+    .describe(
+      "The warranty card image as a data URI that must include a MIME type and use Base64 encoding. Expected format: 'data:<mimetype>;base64,<encoded_data>'."
     ),
   productDescription: z.string().describe('The description of the product.'),
 });
@@ -43,11 +50,16 @@ const prompt = ai.definePrompt({
   name: 'warnShortWarrantiesPrompt',
   input: {schema: WarnShortWarrantiesInputSchema},
   output: {schema: WarnShortWarrantiesOutputSchema},
-  prompt: `You are an AI assistant that analyzes invoice data to determine the warranty period of a product and warns users if the warranty period is potentially short.
+  prompt: `You are an AI assistant that analyzes invoice and/or warranty card data to determine the warranty period of a product and warns users if the warranty period is potentially short.
 
-  Based on the following invoice data and product description, determine if the warranty period is shorter than expected for the product type.  If it is, set isShortWarranty to true, and provide a warning message that the user can act on.
+  Based on the following data and product description, determine if the warranty period is shorter than expected for the product type.  If it is, set isShortWarranty to true, and provide a warning message that the user can act on.
 
+  {{#if invoiceDataUri}}
   Invoice Data: {{media url=invoiceDataUri}}
+  {{/if}}
+  {{#if warrantyCardDataUri}}
+  Warranty Card Data: {{media url=warrantyCardDataUri}}
+  {{/if}}
   Product Description: {{{productDescription}}}`,
 });
 
