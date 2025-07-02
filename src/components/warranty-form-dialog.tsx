@@ -375,7 +375,7 @@ export function WarrantyFormDialog({ children, warranty, onSave }: WarrantyFormD
                           </FormControl>
                         </PopoverTrigger>
                         <PopoverContent className="w-auto p-0" align="start">
-                          <Calendar mode="single" selected={field.value} onSelect={field.onChange} month={field.value} initialFocus />
+                          <Calendar mode="single" selected={field.value} onSelect={field.onChange} defaultMonth={field.value} initialFocus />
                         </PopoverContent>
                       </Popover>
                       <FormMessage />
@@ -401,7 +401,7 @@ export function WarrantyFormDialog({ children, warranty, onSave }: WarrantyFormD
                           </FormControl>
                         </PopoverTrigger>
                         <PopoverContent className="w-auto p-0" align="start">
-                          <Calendar mode="single" selected={field.value} onSelect={field.onChange} month={field.value} initialFocus />
+                          <Calendar mode="single" selected={field.value} onSelect={field.onChange} defaultMonth={field.value} initialFocus />
                         </PopoverContent>
                       </Popover>
                       <FormMessage />
