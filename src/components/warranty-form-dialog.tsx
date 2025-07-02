@@ -239,6 +239,7 @@ export function WarrantyFormDialog({ children, warranty, onSave }: WarrantyFormD
             <div className="space-y-6 py-4 max-h-[70vh] overflow-y-auto pr-4">
               {/* Product Info Section */}
               <div className="space-y-4">
+                <h3 className="text-base font-semibold text-foreground">Product Information</h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <FormField
                     control={form.control}
@@ -276,22 +277,6 @@ export function WarrantyFormDialog({ children, warranty, onSave }: WarrantyFormD
                     )}
                   />
                 </div>
-                <FormField
-                  control={form.control}
-                  name="notes"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Notes (Optional)</FormLabel>
-                      <FormControl>
-                        <Textarea
-                          placeholder="Add any notes, e.g. serial number, gift receipt, special conditions..."
-                          {...field}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
               </div>
 
               <Separator />
@@ -443,6 +428,30 @@ export function WarrantyFormDialog({ children, warranty, onSave }: WarrantyFormD
                     </Alert>
                 )}
               </div>
+              
+              <Separator />
+
+              {/* Notes Section */}
+              <div className="space-y-4">
+                <h3 className="text-base font-semibold text-foreground">Additional Information</h3>
+                <FormField
+                  control={form.control}
+                  name="notes"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Notes (Optional)</FormLabel>
+                      <FormControl>
+                        <Textarea
+                          placeholder="Add any notes, e.g., serial number, gift receipt, special conditions..."
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+
             </div>
 
             <DialogFooter className="pt-4 border-t">
