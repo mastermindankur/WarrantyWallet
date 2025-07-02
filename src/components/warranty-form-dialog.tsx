@@ -127,15 +127,20 @@ export function WarrantyFormDialog({ children, warranty, onSave }: WarrantyFormD
       if (purchaseDateFromAi) {
         form.setValue('purchaseDate', purchaseDateFromAi, { shouldValidate: true });
         reasoningParts.push('AI detected the purchase date.');
-      }
-
-      if (expiryDateFromAi) {
-        form.setValue('expiryDate', expiryDateFromAi, { shouldValidate: true });
-        reasoningParts.push('AI detected the expiry date.');
-      } else if (purchaseDateFromAi && warrantyResult.warrantyPeriodMonths) {
-        const calculatedExpiryDate = addMonths(purchaseDateFromAi, warrantyResult.warrantyPeriodMonths);
-        form.setValue('expiryDate', calculatedExpiryDate, { shouldValidate: true });
-        reasoningParts.push(`AI calculated expiry from a ${warrantyResult.warrantyPeriodMonths}-month warranty.`);
+        
+        // Now, determine the expiry date based on the purchase date
+        if (expiryDateFromAi) {
+            form.setValue('expiryDate', expiryDateFromAi, { shouldValidate: true });
+            reasoningParts.push('AI detected the expiry date.');
+        } else if (warrantyResult.warrantyPeriodMonths) {
+            const calculatedExpiryDate = addMonths(purchaseDateFromAi, warrantyResult.warrantyPeriodMonths);
+            form.setValue('expiryDate', calculatedExpiryDate, { shouldValidate: true });
+            reasoningParts.push(`AI calculated expiry from a ${warrantyResult.warrantyPeriodMonths}-month warranty.`);
+        }
+      } else if (expiryDateFromAi) {
+          // This case is for when only an expiry date is found, which is less common.
+          form.setValue('expiryDate', expiryDateFromAi, { shouldValidate: true });
+          reasoningParts.push('AI detected the expiry date.');
       }
 
 
