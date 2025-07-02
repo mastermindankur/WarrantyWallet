@@ -24,7 +24,7 @@ interface WarrantyCardProps {
 }
 
 export default function WarrantyCard({ warranty }: WarrantyCardProps) {
-  const { productName, category, expiryDate, invoiceImage, warrantyCardImage, notes } = warranty;
+  const { productName, category, expiryDate, invoiceImageChunks, warrantyCardImageChunks, notes } = warranty;
   const hasExpired = isPast(expiryDate);
   const timeLeft = formatDistanceToNow(expiryDate, { addSuffix: true });
 
@@ -36,6 +36,9 @@ export default function WarrantyCard({ warranty }: WarrantyCardProps) {
     }
     return 'text-green-600';
   };
+
+  const invoiceImage = invoiceImageChunks && invoiceImageChunks.length > 0 ? invoiceImageChunks.join('') : null;
+  const warrantyCardImage = warrantyCardImageChunks && warrantyCardImageChunks.length > 0 ? warrantyCardImageChunks.join('') : null;
 
   return (
     <Card className="flex flex-col overflow-hidden transition-all duration-300 hover:shadow-lg hover:-translate-y-1">

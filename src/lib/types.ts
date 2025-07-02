@@ -2,11 +2,12 @@ export type WarrantyCategory = 'Electronics' | 'Appliances' | 'Furniture' | 'Veh
 
 export interface Warranty {
   id: string;
+  userId: string;
   productName: string;
   category: WarrantyCategory;
   purchaseDate: Date;
   expiryDate: Date;
-  invoiceImage?: string;
-  warrantyCardImage?: string;
+  invoiceImageChunks?: string[];
+  warrantyCardImageChunks?: string[];
   notes?: string;
 }

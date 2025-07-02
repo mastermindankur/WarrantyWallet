@@ -1,7 +1,6 @@
 import {initializeApp, getApps, getApp} from 'firebase/app';
 import {getAuth} from 'firebase/auth';
 import { getFirestore } from 'firebase/firestore';
-import { getStorage } from 'firebase/storage';
 
 const firebaseConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
@@ -15,19 +14,16 @@ const firebaseConfig = {
 let app;
 let auth;
 let db;
-let storage;
 
 if (firebaseConfig.apiKey) {
   app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
   auth = getAuth(app);
   db = getFirestore(app);
-  storage = getStorage(app);
 } else {
     console.warn("Firebase configuration is missing. Authentication will be disabled. Please add your Firebase credentials to a .env file.");
     app = null;
     auth = null;
     db = null;
-    storage = null;
 }
 
-export {app, auth, db, storage};
+export {app, auth, db};

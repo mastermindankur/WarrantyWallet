@@ -8,7 +8,6 @@ import { z } from 'zod';
 import { addMonths, format, isValid, parse } from 'date-fns';
 import { CalendarIcon, Loader2, AlertTriangle, Sparkles } from 'lucide-react';
 import { doc, setDoc, collection } from 'firebase/firestore';
-import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 
 import { Button } from '@/components/ui/button';
 import {
@@ -33,7 +32,7 @@ import { detectWarrantyPeriod } from '@/ai/flows/detect-warranty-period';
 import { warnShortWarranties } from '@/ai/flows/warn-short-warranties';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/auth-context';
-import { db, storage } from '@/lib/firebase';
+import { db } from '@/lib/firebase';
 
 const FormSchema = z.object({
   productName: z.string().min(2, 'Product name must be at least 2 characters.'),
@@ -163,7 +162,7 @@ export function WarrantyFormDialog({ children, warranty, onSave }: WarrantyFormD
   };
 
   const onSubmit = async (data: FormValues) => {
-    if (!user || !db || !storage) {
+    if (!user || !db) {
       toast({
         variant: 'destructive',
         title: 'Authentication Error',
@@ -173,29 +172,41 @@ export function WarrantyFormDialog({ children, warranty, onSave }: WarrantyFormD
     }
     
     setIsSaving(true);
+
+    const chunkString = (str: string, size: number): string[] => {
+        const numChunks = Math.ceil(str.length / size);
+        const chunks = new Array(numChunks);
+        for (let i = 0, o = 0; i < numChunks; ++i, o += size) {
+            chunks[i] = str.substr(o, size);
+        }
+        return chunks;
+    };
+    const MAX_CHUNK_SIZE = 1024 * 900; // ~900KB to stay safely under Firestore's 1MB limit
     
     try {
       const docRef = warranty?.id
         ? doc(db, 'warranties', warranty.id)
         : doc(collection(db, 'warranties'));
       
-      let invoiceImageUri: string | undefined = warranty?.invoiceImage;
-      let warrantyCardImageUri: string | undefined = warranty?.warrantyCardImage;
+      let invoiceImageChunks: string[] | undefined = warranty?.invoiceImageChunks;
+      let warrantyCardImageChunks: string[] | undefined = warranty?.warrantyCardImageChunks;
 
-      const uploadFile = async (file: File) => {
-          const fileRef = ref(storage, `warranties/${user.uid}/${docRef.id}/${file.name}`);
-          await uploadBytes(fileRef, file);
-          return await getDownloadURL(fileRef);
-      };
-      
       const invoiceFile = data.invoice?.[0];
       if (invoiceFile) {
-        invoiceImageUri = await uploadFile(invoiceFile);
+        const dataUri = await fileToDataUri(invoiceFile);
+        if (dataUri.length > MAX_CHUNK_SIZE * 10) { // Limit to ~9MB to avoid extreme chunking
+           throw new Error("Invoice file is too large. Please use a smaller file.");
+        }
+        invoiceImageChunks = chunkString(dataUri, MAX_CHUNK_SIZE);
       }
       
       const warrantyCardFile = data.warrantyCard?.[0];
       if (warrantyCardFile) {
-        warrantyCardImageUri = await uploadFile(warrantyCardFile);
+        const dataUri = await fileToDataUri(warrantyCardFile);
+         if (dataUri.length > MAX_CHUNK_SIZE * 10) { // Limit to ~9MB to avoid extreme chunking
+           throw new Error("Warranty card file is too large. Please use a smaller file.");
+        }
+        warrantyCardImageChunks = chunkString(dataUri, MAX_CHUNK_SIZE);
       }
       
       const warrantyDataForDb = {
@@ -205,8 +216,8 @@ export function WarrantyFormDialog({ children, warranty, onSave }: WarrantyFormD
         purchaseDate: data.purchaseDate,
         expiryDate: data.expiryDate,
         notes: data.notes || '',
-        invoiceImage: invoiceImageUri || '',
-        warrantyCardImage: warrantyCardImageUri || '',
+        invoiceImageChunks: invoiceImageChunks || [],
+        warrantyCardImageChunks: warrantyCardImageChunks || [],
       };
       
       await setDoc(docRef, warrantyDataForDb, { merge: true });
@@ -217,12 +228,12 @@ export function WarrantyFormDialog({ children, warranty, onSave }: WarrantyFormD
       setOpen(false);
       form.reset();
       
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error saving warranty:', error);
       toast({
         variant: 'destructive',
         title: 'Save Failed',
-        description: 'There was an error saving your warranty. Please make sure your Firebase Storage CORS rules are set correctly.',
+        description: error.message || 'There was an error saving your warranty. The file might be too large.',
       });
     } finally {
       setIsSaving(false);
