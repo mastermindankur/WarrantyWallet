@@ -100,7 +100,6 @@ export function WarrantyFormDialog({ children, warranty, onSave }: WarrantyFormD
       ]);
       
       let reasoningParts: string[] = [];
-      let datesUpdated = false;
 
       // Helper to safely parse a YYYY-MM-DD string and convert to Date object
       // This is necessary to avoid timezone issues where new Date('YYYY-MM-DD') might result in the previous day.
@@ -115,24 +114,26 @@ export function WarrantyFormDialog({ children, warranty, onSave }: WarrantyFormD
         return null;
       }
 
+      let expiryDateSetByAi = false;
+
       if (warrantyResult.purchaseDate) {
         const parsedDate = parseDate(warrantyResult.purchaseDate);
         if(parsedDate) {
           form.setValue('purchaseDate', parsedDate, { shouldValidate: true });
           reasoningParts.push('AI detected the purchase date.');
-          datesUpdated = true;
         }
       }
+
       if (warrantyResult.expiryDate) {
          const parsedDate = parseDate(warrantyResult.expiryDate);
         if(parsedDate) {
           form.setValue('expiryDate', parsedDate, { shouldValidate: true });
           reasoningParts.push('AI detected the expiry date.');
-          datesUpdated = true;
+          expiryDateSetByAi = true;
         }
       }
 
-      if (!datesUpdated && warrantyResult.warrantyPeriodMonths) {
+      if (!expiryDateSetByAi && warrantyResult.warrantyPeriodMonths) {
         const purchaseDate = form.getValues('purchaseDate');
         const newExpiryDate = addMonths(purchaseDate, warrantyResult.warrantyPeriodMonths);
         form.setValue('expiryDate', newExpiryDate, { shouldValidate: true });
