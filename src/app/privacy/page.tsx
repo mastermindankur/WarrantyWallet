@@ -37,7 +37,6 @@ export default function PrivacyPolicyPage() {
             <h2 className="text-2xl font-bold tracking-tight text-foreground pt-6">5. Changes to This Privacy Policy</h2>
             <p>We may update our Privacy Policy from time to time. We will notify you of any changes by posting the new Privacy Policy on this page. You are advised to review this Privacy Policy periodically for any changes.</p>
             
-            <p className="pt-6 font-bold text-foreground">This is a placeholder privacy policy. You should replace this with your own policy.</p>
           </div>
         </div>
       </main>
