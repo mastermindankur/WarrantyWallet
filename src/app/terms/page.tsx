@@ -32,7 +32,6 @@ export default function TermsPage() {
             <h2 className="text-2xl font-bold tracking-tight text-foreground pt-6">3. Limitations</h2>
             <p>In no event shall WarrantyWallet or its suppliers be liable for any damages (including, without limitation, damages for loss of data or profit, or due to business interruption) arising out of the use or inability to use the materials on WarrantyWallet's website, even if WarrantyWallet or a WarrantyWallet authorized representative has been notified orally or in writing of the possibility of such damage.</p>
             
-            <p className="pt-6 font-bold text-foreground">This is a placeholder terms and conditions page. You should replace this with your own terms.</p>
           </div>
         </div>
       </main>
