@@ -24,7 +24,7 @@ export default function UserNav() {
     if (auth) {
       await signOut(auth);
     }
-    router.push('/');
+    router.push('/login');
   };
 
   if (!user) {

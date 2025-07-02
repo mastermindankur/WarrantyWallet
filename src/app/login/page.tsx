@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { createUserWithEmailAndPassword } from 'firebase/auth';
+import { signInWithEmailAndPassword } from 'firebase/auth';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -15,7 +15,7 @@ import PublicHeader from '@/components/public-header';
 import PublicFooter from '@/components/public-footer';
 import { useAuth } from '@/contexts/auth-context';
 
-export default function SignupPage() {
+export default function LoginPage() {
   const router = useRouter();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -29,50 +29,43 @@ export default function SignupPage() {
     }
   }, [user, authLoading, router]);
 
-  const handleSignup = async (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
     setError(null);
 
     if (!auth) {
-        setError("Firebase is not configured. Please add your Firebase credentials to the .env file.");
-        setIsLoading(false);
-        return;
-    }
-
-    if (password.length < 6) {
-        setError('Password should be at least 6 characters.');
-        setIsLoading(false);
-        return;
+      setError("Firebase is not configured. Please add your Firebase credentials to the .env file.");
+      setIsLoading(false);
+      return;
     }
 
     try {
-      await createUserWithEmailAndPassword(auth, email, password);
+      await signInWithEmailAndPassword(auth, email, password);
       router.push('/dashboard');
     } catch (error: any) {
       console.error(error);
       let errorMessage = 'An unexpected error occurred. Please try again.';
       if (error.code) {
         switch (error.code) {
-          case 'auth/email-already-in-use':
-            errorMessage = 'This email address is already in use.';
+          case 'auth/user-not-found':
+          case 'auth/wrong-password':
+          case 'auth/invalid-credential':
+            errorMessage = 'Invalid email or password.';
             break;
           case 'auth/invalid-email':
             errorMessage = 'Please enter a valid email address.';
             break;
-          case 'auth/weak-password':
-            errorMessage = 'The password is too weak.';
-            break;
           default:
-            errorMessage = 'Failed to create an account. Please try again later.';
+            errorMessage = 'Failed to sign in. Please try again later.';
         }
       }
       setError(errorMessage);
     } finally {
-      setIsLoading(false);
+        setIsLoading(false);
     }
   };
-
+  
   if (authLoading || user) {
     return (
         <div className="flex min-h-screen w-full items-center justify-center bg-background">
@@ -91,33 +84,33 @@ export default function SignupPage() {
               <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-primary">
                 <ShieldCheck className="h-8 w-8 text-primary-foreground" />
               </div>
-              <CardTitle className="text-3xl font-bold">Create an Account</CardTitle>
-              <CardDescription>Get started with WarrantyWallet for free.</CardDescription>
+              <CardTitle className="text-3xl font-bold">Welcome Back</CardTitle>
+              <CardDescription>Sign in to access your warranties.</CardDescription>
             </CardHeader>
             <CardContent>
-              <form onSubmit={handleSignup} className="space-y-4">
+              <form onSubmit={handleLogin} className="space-y-4">
                 {error && (
                   <Alert variant="destructive">
-                    <AlertTitle>Signup Failed</AlertTitle>
+                    <AlertTitle>Login Failed</AlertTitle>
                     <AlertDescription>{error}</AlertDescription>
                   </Alert>
                 )}
                 <div className="space-y-2">
                   <Label htmlFor="email">Email</Label>
-                  <Input id="email" type="email" placeholder="you@example.com" required value={email} onChange={(e) => setEmail(e.target.value)} />
+                  <Input id="email" type="email" placeholder="you@example.com" required value={email} onChange={e => setEmail(e.target.value)} />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="password">Password</Label>
-                  <Input id="password" type="password" required value={password} onChange={(e) => setPassword(e.target.value)} />
+                  <Input id="password" type="password" required value={password} onChange={e => setPassword(e.target.value)} />
                 </div>
                 <Button type="submit" className="w-full text-lg" disabled={isLoading}>
                   {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                  Sign Up
+                  Log In
                 </Button>
                 <div className="text-center text-sm text-muted-foreground">
-                  Already have an account?{' '}
-                  <Link href="/login" className="font-medium text-primary hover:underline">
-                    Log in
+                  Don't have an account?{' '}
+                  <Link href="/signup" className="font-medium text-primary hover:underline">
+                    Sign up
                   </Link>
                 </div>
               </form>
