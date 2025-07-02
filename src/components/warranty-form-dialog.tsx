@@ -107,8 +107,9 @@ export function WarrantyFormDialog({ children, warranty, onSave }: WarrantyFormD
       
       const parseDate = (dateString: string | undefined): Date | null => {
         if (!dateString) return null;
-        const flexibleDate = new Date(dateString);
+        const flexibleDate = new Date(dateString.replace(/-/g, '/')); // More robust parsing
         if (isValid(flexibleDate)) {
+            // Return date in local timezone but with UTC values to avoid off-by-one day errors
             return new Date(Date.UTC(flexibleDate.getFullYear(), flexibleDate.getMonth(), flexibleDate.getDate()));
         }
         return null;
@@ -120,24 +121,24 @@ export function WarrantyFormDialog({ children, warranty, onSave }: WarrantyFormD
       }
       
       const purchaseDate = parseDate(warrantyResult.purchaseDate);
-      const expiryDate = parseDate(warrantyResult.expiryDate);
+      let expiryDate = parseDate(warrantyResult.expiryDate);
 
       if (purchaseDate) {
         form.setValue('purchaseDate', purchaseDate, { shouldValidate: true });
         reasoningParts.push('AI detected the purchase date.');
         
-        if (expiryDate) {
-          form.setValue('expiryDate', expiryDate, { shouldValidate: true });
-          reasoningParts.push('AI detected the expiry date.');
-        } else if (warrantyResult.warrantyPeriodMonths) {
-          const calculatedExpiryDate = addMonths(purchaseDate, warrantyResult.warrantyPeriodMonths);
-          form.setValue('expiryDate', calculatedExpiryDate, { shouldValidate: true });
+        // Calculate expiry date only if not directly provided
+        if (!expiryDate && warrantyResult.warrantyPeriodMonths) {
+          expiryDate = addMonths(purchaseDate, warrantyResult.warrantyPeriodMonths);
           reasoningParts.push(`AI calculated expiry from a ${warrantyResult.warrantyPeriodMonths}-month warranty.`);
         }
-      } else if (expiryDate) {
+      }
+
+      if (expiryDate) {
         form.setValue('expiryDate', expiryDate, { shouldValidate: true });
         reasoningParts.push('AI detected the expiry date.');
       }
+      
 
       const confidenceText = `(Confidence: ${Math.round(warrantyResult.confidenceScore * 100)}%)`;
       setAiReasoning(`${reasoningParts.join(' ')} ${confidenceText}`);
@@ -171,7 +172,13 @@ export function WarrantyFormDialog({ children, warranty, onSave }: WarrantyFormD
     setIsSaving(true);
     
     try {
-      const warrantyId = warranty?.id || doc(collection(db, 'warranties')).id;
+      // Determine the document reference first. Either an existing one for edits, or a new one.
+      const docRef = warranty?.id
+        ? doc(db, 'warranties', warranty.id)
+        : doc(collection(db, 'warranties'));
+      
+      const warrantyId = docRef.id;
+      
       let invoiceImageUri: string | undefined = warranty?.invoiceImage;
       let warrantyCardImageUri: string | undefined = warranty?.warrantyCardImage;
       
@@ -200,7 +207,8 @@ export function WarrantyFormDialog({ children, warranty, onSave }: WarrantyFormD
         warrantyCardImage: warrantyCardImageUri || '',
       };
       
-      await setDoc(doc(db, 'warranties', warrantyId), warrantyDataForDb);
+      // Use the reference we created at the start.
+      await setDoc(docRef, warrantyDataForDb);
       
       onSave();
       
