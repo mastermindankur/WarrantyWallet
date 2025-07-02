@@ -5,9 +5,10 @@ import { useState, type ReactNode } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { addMonths, format, isValid } from 'date-fns';
+import { addMonths, format, isValid, parse } from 'date-fns';
 import { CalendarIcon, Loader2, AlertTriangle, Sparkles } from 'lucide-react';
 import { doc, setDoc, collection } from 'firebase/firestore';
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 
 import { Button } from '@/components/ui/button';
 import {
@@ -32,7 +33,7 @@ import { detectWarrantyPeriod } from '@/ai/flows/detect-warranty-period';
 import { warnShortWarranties } from '@/ai/flows/warn-short-warranties';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/auth-context';
-import { db } from '@/lib/firebase';
+import { db, storage } from '@/lib/firebase';
 
 const FormSchema = z.object({
   productName: z.string().min(2, 'Product name must be at least 2 characters.'),
@@ -106,10 +107,14 @@ export function WarrantyFormDialog({ children, warranty, onSave }: WarrantyFormD
       
       const parseDate = (dateString: string | undefined): Date | null => {
         if (!dateString) return null;
-        // Handles 'YYYY-MM-DD' and 'Month D, YYYY' etc.
-        const d = new Date(dateString.replace(/-/g, '/'));
+        // Try parsing YYYY-MM-DD first
+        let d = parse(dateString, 'yyyy-MM-dd', new Date());
         if (isValid(d)) {
-          // Create a UTC date to avoid timezone-off-by-one errors when displaying
+          return new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
+        }
+        // Fallback to more general parsing
+        d = new Date(dateString);
+        if (isValid(d)) {
           return new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
         }
         return null;
@@ -158,7 +163,7 @@ export function WarrantyFormDialog({ children, warranty, onSave }: WarrantyFormD
   };
 
   const onSubmit = async (data: FormValues) => {
-    if (!user || !db) {
+    if (!user || !db || !storage) {
       toast({
         variant: 'destructive',
         title: 'Authentication Error',
@@ -176,15 +181,21 @@ export function WarrantyFormDialog({ children, warranty, onSave }: WarrantyFormD
       
       let invoiceImageUri: string | undefined = warranty?.invoiceImage;
       let warrantyCardImageUri: string | undefined = warranty?.warrantyCardImage;
+
+      const uploadFile = async (file: File) => {
+          const fileRef = ref(storage, `warranties/${user.uid}/${docRef.id}/${file.name}`);
+          await uploadBytes(fileRef, file);
+          return await getDownloadURL(fileRef);
+      };
       
       const invoiceFile = data.invoice?.[0];
       if (invoiceFile) {
-        invoiceImageUri = await fileToDataUri(invoiceFile);
+        invoiceImageUri = await uploadFile(invoiceFile);
       }
       
       const warrantyCardFile = data.warrantyCard?.[0];
       if (warrantyCardFile) {
-        warrantyCardImageUri = await fileToDataUri(warrantyCardFile);
+        warrantyCardImageUri = await uploadFile(warrantyCardFile);
       }
       
       const warrantyDataForDb = {
@@ -198,7 +209,7 @@ export function WarrantyFormDialog({ children, warranty, onSave }: WarrantyFormD
         warrantyCardImage: warrantyCardImageUri || '',
       };
       
-      await setDoc(docRef, warrantyDataForDb);
+      await setDoc(docRef, warrantyDataForDb, { merge: true });
       
       onSave();
       
@@ -211,7 +222,7 @@ export function WarrantyFormDialog({ children, warranty, onSave }: WarrantyFormD
       toast({
         variant: 'destructive',
         title: 'Save Failed',
-        description: 'There was an error saving your warranty. Please try again.',
+        description: 'There was an error saving your warranty. Please make sure your Firebase Storage CORS rules are set correctly.',
       });
     } finally {
       setIsSaving(false);
