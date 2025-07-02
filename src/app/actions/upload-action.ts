@@ -3,13 +3,21 @@
 import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
 import { randomUUID } from 'crypto';
 
-const s3Client = new S3Client({
-  region: process.env.AWS_S3_REGION!,
-  credentials: {
-    accessKeyId: process.env.AWS_ACCESS_KEY_ID!,
-    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY!,
-  },
-});
+let s3Client: S3Client | null = null;
+
+if (
+  process.env.AWS_S3_REGION &&
+  process.env.AWS_ACCESS_KEY_ID &&
+  process.env.AWS_SECRET_ACCESS_KEY
+) {
+  s3Client = new S3Client({
+    region: process.env.AWS_S3_REGION,
+    credentials: {
+      accessKeyId: process.env.AWS_ACCESS_KEY_ID,
+      secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
+    },
+  });
+}
 
 export async function uploadFileToS3(
   userId: string,
@@ -17,12 +25,9 @@ export async function uploadFileToS3(
   fileDataUri: string,
   fileName: string
 ) {
-  if (
-    !process.env.AWS_S3_BUCKET_NAME ||
-    !process.env.AWS_S3_REGION ||
-    !process.env.AWS_ACCESS_KEY_ID ||
-    !process.env.AWS_SECRET_ACCESS_KEY
-  ) {
+  if (!s3Client || !process.env.AWS_S3_BUCKET_NAME) {
+    if (!s3Client) console.error('s3Client is null because AWS environment variables are not fully configured.');
+    if (!process.env.AWS_S3_BUCKET_NAME) console.error('AWS_S3_BUCKET_NAME is not set');
     throw new Error('AWS S3 environment variables are not configured.');
   }
 
@@ -46,8 +51,13 @@ export async function uploadFileToS3(
 
     const fileUrl = `https://${process.env.AWS_S3_BUCKET_NAME}.s3.${process.env.AWS_S3_REGION}.amazonaws.com/${s3Key}`;
     return fileUrl;
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error uploading to S3:', error);
-    throw new Error('Failed to upload file to S3.');
+    // Provide a more specific error message to help with debugging.
+    // The "AccessDenied" error name is a common indicator of a permissions or public access block issue.
+    const message = error.name === 'AccessDenied' 
+      ? 'Access Denied. Please check your S3 bucket permissions and public access block settings.' 
+      : `An AWS error occurred: ${error.name || 'Unknown'}.`;
+    throw new Error(message);
   }
 }
