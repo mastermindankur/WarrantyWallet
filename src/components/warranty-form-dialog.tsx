@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, type ReactNode } from 'react';
@@ -35,6 +36,7 @@ const FormSchema = z.object({
   purchaseDate: z.date(),
   expiryDate: z.date(),
   invoice: z.any().optional(),
+  warrantyCard: z.any().optional(),
 });
 
 type FormValues = z.infer<typeof FormSchema>;
@@ -107,12 +109,24 @@ export function WarrantyFormDialog({ children, warranty, onSave }: WarrantyFormD
     }
   };
 
-  const onSubmit = (data: FormValues) => {
-    const newWarrantyData: Warranty = {
+  const onSubmit = async (data: FormValues) => {
+    const newWarrantyData: Partial<Warranty> & Pick<Warranty, 'id'> = {
       id: warranty?.id || Date.now().toString(),
-      ...data,
+      productName: data.productName,
+      category: data.category,
+      purchaseDate: data.purchaseDate,
+      expiryDate: data.expiryDate,
     };
-    onSave(newWarrantyData);
+
+    if (data.invoice?.[0]) {
+      newWarrantyData.invoiceImage = await fileToDataUri(data.invoice[0]);
+    }
+    
+    if (data.warrantyCard?.[0]) {
+      newWarrantyData.warrantyCardImage = await fileToDataUri(data.warrantyCard[0]);
+    }
+
+    onSave(newWarrantyData as Warranty);
     setOpen(false);
     form.reset();
   };
@@ -168,22 +182,58 @@ export function WarrantyFormDialog({ children, warranty, onSave }: WarrantyFormD
             <FormField
               control={form.control}
               name="invoice"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Invoice</FormLabel>
-                  <FormControl>
-                    <div className="relative">
-                      <Input type="file" accept="image/*,.pdf" onChange={handleInvoiceChange} className="pr-12" />
-                      {isAiRunning && (
-                        <div className="absolute inset-y-0 right-0 flex items-center pr-3">
-                           <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
-                        </div>
-                      )}
-                    </div>
-                  </FormControl>
-                   <FormMessage />
-                </FormItem>
-              )}
+              render={({ field }) => {
+                const { value, ...rest } = field;
+                return (
+                  <FormItem>
+                    <FormLabel>Invoice (Optional)</FormLabel>
+                    <FormControl>
+                      <div className="relative">
+                        <Input
+                          {...rest}
+                          type="file"
+                          accept="image/*,.pdf"
+                          onChange={(event) => {
+                            field.onChange(event.target.files);
+                            handleInvoiceChange(event);
+                          }}
+                          className="pr-12"
+                        />
+                        {isAiRunning && (
+                          <div className="absolute inset-y-0 right-0 flex items-center pr-3">
+                            <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+                          </div>
+                        )}
+                      </div>
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                );
+              }}
+            />
+
+            <FormField
+              control={form.control}
+              name="warrantyCard"
+              render={({ field }) => {
+                const { value, ...rest } = field;
+                return (
+                  <FormItem>
+                    <FormLabel>Warranty Card (Optional)</FormLabel>
+                    <FormControl>
+                      <Input
+                        {...rest}
+                        type="file"
+                        accept="image/*,.pdf"
+                        onChange={(event) => {
+                          field.onChange(event.target.files);
+                        }}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                );
+              }}
             />
 
             <div className="grid grid-cols-2 gap-4">
