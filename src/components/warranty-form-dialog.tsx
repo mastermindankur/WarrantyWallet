@@ -121,24 +121,23 @@ export function WarrantyFormDialog({ children, warranty, onSave }: WarrantyFormD
         return null;
       }
 
-      const purchaseDateFromAi = parseDate(warrantyResult.purchaseDate);
-      const expiryDateFromAi = parseDate(warrantyResult.expiryDate);
+      const purchaseDate = parseDate(warrantyResult.purchaseDate);
 
-      // Set purchase date if available
-      if (purchaseDateFromAi) {
-        form.setValue('purchaseDate', purchaseDateFromAi, { shouldValidate: true });
+      if (purchaseDate) {
+        form.setValue('purchaseDate', purchaseDate, { shouldValidate: true });
         reasoningParts.push('AI detected the purchase date.');
-      }
+        
+        // With a valid purchase date, we can now determine the expiry date.
+        const expiryDate = parseDate(warrantyResult.expiryDate);
 
-      // Determine and set expiry date
-      if (expiryDateFromAi) {
-        form.setValue('expiryDate', expiryDateFromAi, { shouldValidate: true });
-        reasoningParts.push('AI detected the expiry date.');
-      } else if (purchaseDateFromAi && warrantyResult.warrantyPeriodMonths) {
-        // Calculate from purchase date and warranty period if no explicit expiry date
-        const calculatedExpiryDate = addMonths(purchaseDateFromAi, warrantyResult.warrantyPeriodMonths);
-        form.setValue('expiryDate', calculatedExpiryDate, { shouldValidate: true });
-        reasoningParts.push(`AI calculated expiry from a ${warrantyResult.warrantyPeriodMonths}-month warranty.`);
+        if (expiryDate) {
+            form.setValue('expiryDate', expiryDate, { shouldValidate: true });
+            reasoningParts.push('AI detected the expiry date.');
+        } else if (warrantyResult.warrantyPeriodMonths) {
+            const calculatedExpiryDate = addMonths(purchaseDate, warrantyResult.warrantyPeriodMonths);
+            form.setValue('expiryDate', calculatedExpiryDate, { shouldValidate: true });
+            reasoningParts.push(`AI calculated expiry from a ${warrantyResult.warrantyPeriodMonths}-month warranty.`);
+        }
       }
 
       const confidenceText = `(Confidence: ${Math.round(warrantyResult.confidenceScore * 100)}%)`;
