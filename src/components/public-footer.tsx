@@ -17,9 +17,9 @@ export default function PublicFooter() {
             </Link>
           </div>
           <div className="pb-6">
-            <Link href="/disclaimer" className="text-sm leading-6 text-muted-foreground hover:text-primary">
-              Disclaimer
-            </Link>
+            <a href="mailto:mastermindankur@duck.com" className="text-sm leading-6 text-muted-foreground hover:text-primary">
+              Contact
+            </a>
           </div>
         </nav>
         <div className="mt-10 flex justify-center space-x-10">
