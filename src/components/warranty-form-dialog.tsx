@@ -100,12 +100,19 @@ export function WarrantyFormDialog({ children, warranty, onSave }: WarrantyFormD
       ]);
       
       let reasoningParts: string[] = [];
+      if (warrantyResult.reasoning) {
+        reasoningParts.push(warrantyResult.reasoning);
+      }
 
-      // Helper to safely parse a YYYY-MM-DD string and convert to Date object
-      // This is necessary to avoid timezone issues where new Date('YYYY-MM-DD') might result in the previous day.
-      const parseDate = (dateString: string): Date | null => {
-        const [year, month, day] = dateString.split('-').map(Number);
-        if (year && month && day) {
+      const parseDate = (dateString: string | undefined): Date | null => {
+        if (!dateString) return null;
+        // Handle YYYY-MM-DD and YYYY-MM-DDTHH:mm:ss.sssZ formats by taking only the date part
+        const datePart = dateString.split('T')[0];
+        const [year, month, day] = datePart.split('-').map(Number);
+        
+        // Check if all parts are valid numbers
+        if (!isNaN(year) && !isNaN(month) && !isNaN(day) && month > 0 && day > 0) {
+            // Using new Date(year, month-1, day) is safer for timezone issues than new Date('YYYY-MM-DD')
             const date = new Date(year, month - 1, day);
             if (isValid(date)) {
                 return date;
@@ -114,39 +121,31 @@ export function WarrantyFormDialog({ children, warranty, onSave }: WarrantyFormD
         return null;
       }
 
-      let expiryDateSetByAi = false;
-
-      if (warrantyResult.purchaseDate) {
-        const parsedDate = parseDate(warrantyResult.purchaseDate);
-        if(parsedDate) {
-          form.setValue('purchaseDate', parsedDate, { shouldValidate: true });
-          reasoningParts.push('AI detected the purchase date.');
-        }
+      const purchaseDateFromAi = parseDate(warrantyResult.purchaseDate);
+      if (purchaseDateFromAi) {
+        form.setValue('purchaseDate', purchaseDateFromAi, { shouldValidate: true });
+        reasoningParts.push('AI detected the purchase date.');
       }
-
-      if (warrantyResult.expiryDate) {
-         const parsedDate = parseDate(warrantyResult.expiryDate);
-        if(parsedDate) {
-          form.setValue('expiryDate', parsedDate, { shouldValidate: true });
+      
+      let expiryDateToSet: Date | null = parseDate(warrantyResult.expiryDate);
+      if(expiryDateToSet) {
           reasoningParts.push('AI detected the expiry date.');
-          expiryDateSetByAi = true;
-        }
       }
 
-      if (!expiryDateSetByAi && warrantyResult.warrantyPeriodMonths) {
-        const purchaseDate = form.getValues('purchaseDate');
-        const newExpiryDate = addMonths(purchaseDate, warrantyResult.warrantyPeriodMonths);
-        form.setValue('expiryDate', newExpiryDate, { shouldValidate: true });
+      // If AI didn't provide a valid expiry date, try to calculate it
+      if (!expiryDateToSet && warrantyResult.warrantyPeriodMonths && purchaseDateFromAi) {
+        const newExpiryDate = addMonths(purchaseDateFromAi, warrantyResult.warrantyPeriodMonths);
+        expiryDateToSet = newExpiryDate; // now we have a calculated expiry date
         reasoningParts.push(`AI calculated expiry from a ${warrantyResult.warrantyPeriodMonths}-month warranty.`);
       }
       
-      const confidenceText = `(Confidence: ${Math.round(warrantyResult.confidenceScore * 100)}%)`;
-      if (warrantyResult.reasoning) {
-        setAiReasoning(`${warrantyResult.reasoning} ${reasoningParts.join(' ')} ${confidenceText}`);
-      } else if (reasoningParts.length > 0) {
-        setAiReasoning(`${reasoningParts.join(' ')} ${confidenceText}`);
+      // Now, set the final expiry date if we have one
+      if (expiryDateToSet) {
+        form.setValue('expiryDate', expiryDateToSet, { shouldValidate: true });
       }
 
+      const confidenceText = `(Confidence: ${Math.round(warrantyResult.confidenceScore * 100)}%)`;
+      setAiReasoning(`${reasoningParts.join(' ')} ${confidenceText}`);
 
       if (shortWarrantyResult.isShortWarranty) {
         setAiWarning(shortWarrantyResult.warningMessage);
