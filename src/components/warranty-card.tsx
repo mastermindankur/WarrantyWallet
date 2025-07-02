@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { format, formatDistanceToNow, isPast } from 'date-fns';
+import { format, formatDistanceToNow, isPast, intervalToDuration } from 'date-fns';
 import { doc, deleteDoc } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
 import {
@@ -43,10 +43,42 @@ interface WarrantyCardProps {
   onUpdate: () => void;
 }
 
+function formatRemainingTime(expiryDate: Date): string {
+  const now = new Date();
+  if (isPast(expiryDate)) {
+    return `Expired ${formatDistanceToNow(expiryDate, { addSuffix: true })}`;
+  }
+
+  const duration = intervalToDuration({ start: now, end: expiryDate });
+
+  const years = duration.years || 0;
+  const months = duration.months || 0;
+  const days = duration.days || 0;
+
+  if (years > 0) {
+    const parts = [`${years} year${years > 1 ? 's' : ''}`];
+    if (months > 0) {
+      parts.push(`${months} month${months > 1 ? 's' : ''}`);
+    }
+    return `Expires in ${parts.join(' and ')}`;
+  }
+
+  if (months > 0) {
+    return `Expires in ${months} month${months > 1 ? 's' : ''}`;
+  }
+  
+  if (days > 0) {
+      return `Expires in ${days} day${days > 1 ? 's' : ''}`;
+  }
+  
+  // For less than a day
+  return `Expires ${formatDistanceToNow(expiryDate, { addSuffix: true })}`;
+}
+
+
 export default function WarrantyCard({ warranty, onUpdate }: WarrantyCardProps) {
   const { id, productName, category, expiryDate, invoiceKey, warrantyCardKey, notes } = warranty;
   const hasExpired = isPast(expiryDate);
-  const timeLeft = formatDistanceToNow(expiryDate, { addSuffix: true });
 
   const [isLoadingInvoice, setIsLoadingInvoice] = useState(false);
   const [isLoadingCard, setIsLoadingCard] = useState(false);
@@ -136,7 +168,7 @@ export default function WarrantyCard({ warranty, onUpdate }: WarrantyCardProps) 
       <CardContent className="flex-grow">
         <div className="space-y-4">
             <div className={cn('font-medium', getExpiryColor())}>
-                {hasExpired ? `Expired ${timeLeft}` : `Expires ${timeLeft}`}
+                {formatRemainingTime(expiryDate)}
             </div>
             <div className="flex items-center space-x-4 text-sm text-muted-foreground">
                 {invoiceKey && (
