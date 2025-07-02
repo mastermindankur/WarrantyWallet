@@ -1,4 +1,7 @@
+'use client';
+
 import Link from 'next/link';
+import { usePathname, useSearchParams } from 'next/navigation';
 import {
   Home,
   Laptop,
@@ -17,16 +20,28 @@ import {
 } from '@/components/ui/sheet';
 import UserNav from './user-nav';
 import type { LucideIcon } from 'lucide-react';
+import type { WarrantyCategory } from '@/lib/types';
+import { cn } from '@/lib/utils';
 
-const mobileNavItems: { href: string; label: string; icon: LucideIcon }[] = [
-  { href: '/dashboard', label: 'All', icon: Home },
-  { href: '#', label: 'Electronics', icon: Laptop },
-  { href: '#', label: 'Appliances', icon: Smartphone },
-  { href: '#', label: 'Furniture', icon: Sofa },
-  { href: '#', label: 'Vehicles', icon: Car },
+const mobileNavItems: { href: string; label: string; icon: LucideIcon; category?: WarrantyCategory | 'All' }[] = [
+  { href: '/dashboard', label: 'All', icon: Home, category: 'All' },
+  { href: '/dashboard?category=Electronics', label: 'Electronics', icon: Laptop, category: 'Electronics' },
+  { href: '/dashboard?category=Appliances', label: 'Appliances', icon: Smartphone, category: 'Appliances' },
+  { href: '/dashboard?category=Furniture', label: 'Furniture', icon: Sofa, category: 'Furniture' },
+  { href: '/dashboard?category=Vehicles', label: 'Vehicles', icon: Car, category: 'Vehicles' },
 ];
 
 export default function Header() {
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const currentCategory = searchParams.get('category');
+
+  const isActive = (itemCategory?: WarrantyCategory | 'All') => {
+    if (pathname !== '/dashboard') return false;
+    if (itemCategory === 'All') return !currentCategory;
+    return itemCategory === currentCategory;
+  };
+
   return (
     <header className="sticky top-0 z-30 flex h-14 items-center gap-4 border-b bg-background px-4 sm:static sm:h-auto sm:border-0 sm:bg-transparent sm:px-6">
       <Sheet>
@@ -49,7 +64,10 @@ export default function Header() {
               <Link
                 key={item.label}
                 href={item.href}
-                className="flex items-center gap-4 px-2.5 text-muted-foreground hover:text-foreground"
+                className={cn(
+                  "flex items-center gap-4 px-2.5 text-muted-foreground hover:text-foreground",
+                  isActive(item.category) && "font-semibold text-foreground"
+                )}
               >
                 <item.icon className="h-5 w-5" />
                 {item.label}

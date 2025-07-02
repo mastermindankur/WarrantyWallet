@@ -1,9 +1,11 @@
-
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, Suspense } from 'react';
 import { collection, getDocs, query, Timestamp, where } from 'firebase/firestore';
-import { PlusCircle, SortAsc, SortDesc } from 'lucide-react';
+import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
+import { Frown, PlusCircle, SortAsc, SortDesc } from 'lucide-react';
+
 import { useAuth } from '@/contexts/auth-context';
 import { db } from '@/lib/firebase';
 import type { Warranty } from '@/lib/types';
@@ -13,14 +15,15 @@ import { Skeleton } from '@/components/ui/skeleton';
 import WarrantyCard from '@/components/warranty-card';
 import { WarrantyFormDialog } from '@/components/warranty-form-dialog';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Frown } from 'lucide-react';
 
-export default function Dashboard() {
+function DashboardContent() {
   const [warranties, setWarranties] = useState<Warranty[]>([]);
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const { user } = useAuth();
+  const searchParams = useSearchParams();
+  const selectedCategory = searchParams.get('category');
 
   const fetchWarranties = async () => {
     if (!user || !db) {
@@ -36,7 +39,6 @@ export default function Dashboard() {
         .map((doc) => {
           const data = doc.data();
           
-          // Defensive check for Timestamp fields to prevent crashes on malformed data
           if (!(data.purchaseDate && typeof data.purchaseDate.toDate === 'function') || !(data.expiryDate && typeof data.expiryDate.toDate === 'function')) {
             console.warn(`Skipping warranty with invalid date format: ${doc.id}`);
             return null;
@@ -66,11 +68,13 @@ export default function Dashboard() {
     }
   }, [user]);
 
-  const sortedWarranties = [...warranties].sort((a, b) => {
-    const dateA = a.expiryDate.getTime();
-    const dateB = b.expiryDate.getTime();
-    return sortOrder === 'asc' ? dateA - dateB : dateB - a;
-  });
+  const filteredAndSortedWarranties = [...warranties]
+    .filter(warranty => !selectedCategory || warranty.category === selectedCategory)
+    .sort((a, b) => {
+      const dateA = a.expiryDate.getTime();
+      const dateB = b.expiryDate.getTime();
+      return sortOrder === 'asc' ? dateA - dateB : dateB - dateA;
+    });
 
   const handleWarrantyUpdate = () => {
     fetchWarranties();
@@ -113,9 +117,24 @@ export default function Dashboard() {
         );
     }
 
+    if (filteredAndSortedWarranties.length === 0) {
+        return (
+            <div className="flex flex-col items-center justify-center rounded-lg border-2 border-dashed border-muted-foreground/30 bg-muted/20 py-12 text-center">
+                <div className="mb-4 rounded-full border border-dashed p-4">
+                    <Frown className="h-12 w-12 text-muted-foreground" />
+                </div>
+                <h2 className="text-2xl font-semibold tracking-tight">No Warranties Found</h2>
+                <p className="text-muted-foreground">No warranties found in the "{selectedCategory}" category.</p>
+                <Link href="/dashboard">
+                    <Button variant="outline" className="mt-4">View All Warranties</Button>
+                </Link>
+            </div>
+        );
+    }
+
     return (
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-        {sortedWarranties.map((warranty) => (
+        {filteredAndSortedWarranties.map((warranty) => (
           <WarrantyCard key={warranty.id} warranty={warranty} onUpdate={handleWarrantyUpdate} />
         ))}
       </div>
@@ -127,7 +146,9 @@ export default function Dashboard() {
       <div className="flex items-center justify-between pb-4">
         <div>
           <h1 className="text-3xl font-bold">Your Warranties</h1>
-          <p className="text-muted-foreground">An overview of all your product warranties.</p>
+          <p className="text-muted-foreground">
+            {selectedCategory ? `Viewing ${selectedCategory}` : 'An overview of all your product warranties.'}
+          </p>
         </div>
         {warranties.length > 0 && (
             <div className="flex items-center gap-2">
@@ -159,4 +180,12 @@ export default function Dashboard() {
       {renderContent()}
     </div>
   );
+}
+
+export default function Dashboard() {
+    return (
+        <Suspense fallback={<div className="flex min-h-screen w-full items-center justify-center"><p>Loading warranties...</p></div>}>
+            <DashboardContent />
+        </Suspense>
+    );
 }
