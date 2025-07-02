@@ -226,17 +226,17 @@ export function WarrantyFormDialog({ children, warranty, onSave }: WarrantyFormD
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>{children}</DialogTrigger>
-      <DialogContent className="sm:max-w-2xl">
+      <DialogContent className="sm:max-w-2xl flex flex-col max-h-[90vh] p-0">
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)}>
-            <DialogHeader>
+          <form onSubmit={form.handleSubmit(onSubmit)} className="flex flex-col flex-grow overflow-hidden">
+            <DialogHeader className="p-6 pb-4">
               <DialogTitle>{warranty ? 'Edit Warranty' : 'Add New Warranty'}</DialogTitle>
               <DialogDescription>
                 Fill in the details below. You can upload an invoice or warranty card to let AI autofill the dates for you.
               </DialogDescription>
             </DialogHeader>
 
-            <div className="space-y-6 py-4 max-h-[70vh] overflow-y-auto pr-4">
+            <div className="flex-grow space-y-6 py-4 overflow-y-auto px-6">
               {/* Product Info Section */}
               <div className="space-y-4">
                 <h3 className="text-base font-semibold text-foreground">Product Information</h3>
@@ -454,7 +454,7 @@ export function WarrantyFormDialog({ children, warranty, onSave }: WarrantyFormD
 
             </div>
 
-            <DialogFooter className="pt-4 border-t">
+            <DialogFooter className="p-6 pt-4 border-t">
               <Button type="button" variant="outline" onClick={() => setOpen(false)}>Cancel</Button>
               <Button type="submit" disabled={isSaving || isAiRunning}>
                 {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
