@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, type ReactNode } from 'react';
@@ -26,6 +25,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Calendar } from '@/components/ui/calendar';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Separator } from '@/components/ui/separator';
 import { cn, fileToDataUri } from '@/lib/utils';
 import type { Warranty, WarrantyCategory } from '@/lib/types';
 import { detectWarrantyPeriod } from '@/ai/flows/detect-warranty-period';
@@ -226,208 +226,226 @@ export function WarrantyFormDialog({ children, warranty, onSave }: WarrantyFormD
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>{children}</DialogTrigger>
-      <DialogContent className="sm:max-w-[480px]">
+      <DialogContent className="sm:max-w-2xl">
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)}>
             <DialogHeader>
               <DialogTitle>{warranty ? 'Edit Warranty' : 'Add New Warranty'}</DialogTitle>
-              <DialogDescription>Fill in the details of your product warranty.</DialogDescription>
+              <DialogDescription>
+                Fill in the details below. You can upload an invoice or warranty card to let AI autofill the dates for you.
+              </DialogDescription>
             </DialogHeader>
 
-            <div className="space-y-4 py-4 max-h-[60vh] overflow-y-auto pr-4">
-              <FormField
-                control={form.control}
-                name="productName"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Product Name</FormLabel>
-                    <FormControl>
-                      <Input placeholder="e.g. ProBook Laptop 15" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="category"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Category</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select a category" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {(['Electronics', 'Appliances', 'Furniture', 'Vehicles', 'Other'] as WarrantyCategory[]).map(cat => (
-                          <SelectItem key={cat} value={cat}>{cat}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="notes"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Notes (Optional)</FormLabel>
-                    <FormControl>
-                      <Textarea
-                        placeholder="Add any notes, e.g. gift receipt, special conditions..."
-                        {...field}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="invoice"
-                render={({ field }) => {
-                  const { value, ...rest } = field;
-                  return (
-                    <FormItem>
-                      <FormLabel>Invoice (Optional)</FormLabel>
-                      <FormControl>
-                        <div className="relative">
-                          <Input
-                            {...rest}
-                            type="file"
-                            accept="image/*,.pdf"
-                            onChange={(event) => {
-                              field.onChange(event.target.files);
-                              runAiExtraction('invoice', event.target.files);
-                            }}
-                            className="pr-12"
-                          />
-                          {isAiRunning && (
-                            <div className="absolute inset-y-0 right-0 flex items-center pr-3">
-                              <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
-                            </div>
-                          )}
-                        </div>
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  );
-                }}
-              />
-
-              <FormField
-                control={form.control}
-                name="warrantyCard"
-                render={({ field }) => {
-                  const { value, ...rest } = field;
-                  return (
-                    <FormItem>
-                      <FormLabel>Warranty Card (Optional)</FormLabel>
-                      <FormControl>
-                      <div className="relative">
-                          <Input
-                            {...rest}
-                            type="file"
-                            accept="image/*,.pdf"
-                            onChange={(event) => {
-                              field.onChange(event.target.files);
-                              runAiExtraction('warrantyCard', event.target.files);
-                            }}
-                            className="pr-12"
-                          />
-                          {isAiRunning && (
-                            <div className="absolute inset-y-0 right-0 flex items-center pr-3">
-                              <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
-                            </div>
-                          )}
-                        </div>
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  );
-                }}
-              />
-
-              <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-6 py-4 max-h-[70vh] overflow-y-auto pr-4">
+              {/* Product Info Section */}
+              <div className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <FormField
+                    control={form.control}
+                    name="productName"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Product Name</FormLabel>
+                        <FormControl>
+                          <Input placeholder="e.g. ProBook Laptop 15" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="category"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Category</FormLabel>
+                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select a category" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            {(['Electronics', 'Appliances', 'Furniture', 'Vehicles', 'Other'] as WarrantyCategory[]).map(cat => (
+                              <SelectItem key={cat} value={cat}>{cat}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
                 <FormField
                   control={form.control}
-                  name="purchaseDate"
+                  name="notes"
                   render={({ field }) => (
-                    <FormItem className="flex flex-col">
-                      <FormLabel>Purchase Date</FormLabel>
-                      <Popover>
-                        <PopoverTrigger asChild>
-                          <FormControl>
-                            <Button
-                              variant="outline"
-                              className={cn('pl-3 text-left font-normal', !field.value && 'text-muted-foreground')}
-                            >
-                              {field.value ? format(field.value, 'PPP') : <span>Pick a date</span>}
-                              <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                            </Button>
-                          </FormControl>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0" align="start">
-                          <Calendar mode="single" selected={field.value} onSelect={field.onChange} defaultMonth={field.value} initialFocus />
-                        </PopoverContent>
-                      </Popover>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="expiryDate"
-                  render={({ field }) => (
-                    <FormItem className="flex flex-col">
-                      <FormLabel>Expiry Date</FormLabel>
-                      <Popover>
-                        <PopoverTrigger asChild>
-                          <FormControl>
-                            <Button
-                              variant="outline"
-                              className={cn('pl-3 text-left font-normal', !field.value && 'text-muted-foreground')}
-                            >
-                              {field.value ? format(field.value, 'PPP') : <span>Pick a date</span>}
-                              <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                            </Button>
-                          </FormControl>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0" align="start">
-                          <Calendar mode="single" selected={field.value} onSelect={field.onChange} defaultMonth={field.value} initialFocus />
-                        </PopoverContent>
-                      </Popover>
+                    <FormItem>
+                      <FormLabel>Notes (Optional)</FormLabel>
+                      <FormControl>
+                        <Textarea
+                          placeholder="Add any notes, e.g. serial number, gift receipt, special conditions..."
+                          {...field}
+                        />
+                      </FormControl>
                       <FormMessage />
                     </FormItem>
                   )}
                 />
               </div>
 
-              {aiReasoning && (
+              <Separator />
+
+              {/* Attachments Section */}
+              <div className="space-y-4">
+                <h3 className="text-base font-semibold text-foreground">AI Document Scan (Optional)</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <FormField
+                    control={form.control}
+                    name="invoice"
+                    render={({ field }) => {
+                      const { value, ...rest } = field;
+                      return (
+                        <FormItem>
+                          <FormLabel>Invoice</FormLabel>
+                          <FormControl>
+                            <Input
+                              {...rest}
+                              type="file"
+                              accept="image/*,.pdf"
+                              onChange={(event) => {
+                                field.onChange(event.target.files);
+                                runAiExtraction('invoice', event.target.files);
+                              }}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      );
+                    }}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="warrantyCard"
+                    render={({ field }) => {
+                      const { value, ...rest } = field;
+                      return (
+                        <FormItem>
+                          <FormLabel>Warranty Card</FormLabel>
+                          <FormControl>
+                            <Input
+                              {...rest}
+                              type="file"
+                              accept="image/*,.pdf"
+                              onChange={(event) => {
+                                field.onChange(event.target.files);
+                                runAiExtraction('warrantyCard', event.target.files);
+                              }}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      );
+                    }}
+                  />
+                </div>
+                {isAiRunning && (
+                  <div className="flex items-center text-sm text-muted-foreground pt-2">
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Analyzing your document... this may take a moment.
+                  </div>
+                )}
+              </div>
+              
+              <Separator />
+
+              {/* Dates Section */}
+              <div className="space-y-4">
+                <h3 className="text-base font-semibold text-foreground">Warranty Dates</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                   <FormField
+                    control={form.control}
+                    name="purchaseDate"
+                    render={({ field }) => (
+                      <FormItem className="flex flex-col">
+                        <FormLabel>Purchase Date</FormLabel>
+                        <Popover>
+                          <PopoverTrigger asChild>
+                            <FormControl>
+                              <Button
+                                variant="outline"
+                                className={cn('pl-3 text-left font-normal', !field.value && 'text-muted-foreground')}
+                              >
+                                {field.value ? format(field.value, 'PPP') : <span>Pick a date</span>}
+                                <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                              </Button>
+                            </FormControl>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-auto p-0" align="start">
+                            <Calendar
+                              mode="single"
+                              selected={field.value}
+                              onSelect={field.onChange}
+                              initialFocus
+                              defaultMonth={field.value}
+                            />
+                          </PopoverContent>
+                        </Popover>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="expiryDate"
+                    render={({ field }) => (
+                      <FormItem className="flex flex-col">
+                        <FormLabel>Expiry Date</FormLabel>
+                        <Popover>
+                          <PopoverTrigger asChild>
+                            <FormControl>
+                              <Button
+                                variant="outline"
+                                className={cn('pl-3 text-left font-normal', !field.value && 'text-muted-foreground')}
+                              >
+                                {field.value ? format(field.value, 'PPP') : <span>Pick a date</span>}
+                                <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                              </Button>
+                            </FormControl>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-auto p-0" align="start">
+                            <Calendar
+                              mode="single"
+                              selected={field.value}
+                              onSelect={field.onChange}
+                              initialFocus
+                              defaultMonth={field.value}
+                            />
+                          </PopoverContent>
+                        </Popover>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+                 {aiReasoning && (
                   <Alert>
                       <Sparkles className="h-4 w-4" />
                       <AlertTitle>AI Analysis</AlertTitle>
                       <AlertDescription>{aiReasoning}</AlertDescription>
                   </Alert>
-              )}
-
-              {aiWarning && (
-                  <Alert variant="destructive">
-                      <AlertTriangle className="h-4 w-4" />
-                      <AlertTitle>Warranty Warning</AlertTitle>
-                      <AlertDescription>{aiWarning}</AlertDescription>
-                  </Alert>
-              )}
+                )}
+                {aiWarning && (
+                    <Alert variant="destructive">
+                        <AlertTriangle className="h-4 w-4" />
+                        <AlertTitle>Warranty Warning</AlertTitle>
+                        <AlertDescription>{aiWarning}</AlertDescription>
+                    </Alert>
+                )}
+              </div>
             </div>
 
-            <DialogFooter>
+            <DialogFooter className="pt-4 border-t">
               <Button type="button" variant="outline" onClick={() => setOpen(false)}>Cancel</Button>
               <Button type="submit" disabled={isSaving || isAiRunning}>
                 {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
