@@ -1,11 +1,13 @@
 "use client"
 
 import * as React from "react"
+import { format } from "date-fns"
 import { ChevronLeft, ChevronRight } from "lucide-react"
-import { DayPicker } from "react-day-picker"
+import { DayPicker, useDayPicker, useNavigation, type CaptionProps } from "react-day-picker"
 
 import { cn } from "@/lib/utils"
 import { buttonVariants } from "@/components/ui/button"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 
 export type CalendarProps = React.ComponentProps<typeof DayPicker>
 
@@ -22,16 +24,6 @@ function Calendar({
       classNames={{
         months: "flex flex-col sm:flex-row space-y-4 sm:space-x-4 sm:space-y-0",
         month: "space-y-4",
-        caption: "flex justify-center pt-1 relative items-center",
-        caption_label: "text-sm font-medium",
-        caption_dropdowns: "flex justify-center gap-1",
-        nav: "space-x-1 flex items-center",
-        nav_button: cn(
-          buttonVariants({ variant: "outline" }),
-          "h-7 w-7 bg-transparent p-0 opacity-50 hover:opacity-100"
-        ),
-        nav_button_previous: "absolute left-1",
-        nav_button_next: "absolute right-1",
         table: "w-full border-collapse space-y-1",
         head_row: "flex",
         head_cell:
@@ -55,14 +47,10 @@ function Calendar({
         ...classNames,
       }}
       components={{
-        IconLeft: ({ className, ...props }) => (
-          <ChevronLeft className={cn("h-4 w-4", className)} {...props} />
-        ),
-        IconRight: ({ className, ...props }) => (
-          <ChevronRight className={cn("h-4 w-4", className)} {...props} />
-        ),
+        Caption: CustomCaption,
+        IconLeft: ({ ...props }) => <ChevronLeft className="h-4 w-4" {...props} />,
+        IconRight: ({ ...props }) => <ChevronRight className="h-4 w-4" {...props} />,
       }}
-      captionLayout="dropdown-buttons"
       fromYear={new Date().getFullYear() - 100}
       toYear={new Date().getFullYear() + 10}
       {...props}
@@ -70,5 +58,76 @@ function Calendar({
   )
 }
 Calendar.displayName = "Calendar"
+
+function CustomCaption({ displayMonth }: CaptionProps) {
+  const { goToMonth, nextMonth, previousMonth } = useNavigation();
+  const { fromYear, toYear } = useDayPicker();
+
+  const startYear = fromYear || new Date().getFullYear() - 100;
+  const endYear = toYear || new Date().getFullYear() + 10;
+  const years = Array.from({ length: endYear - startYear + 1 }, (_, i) => startYear + i);
+  const months = Array.from({ length: 12 }, (_, i) => i);
+
+  return (
+    <div className="flex justify-between items-center mb-4">
+      <div className="flex items-center gap-2">
+        <Select
+          value={displayMonth.getMonth().toString()}
+          onValueChange={(value) => {
+            goToMonth(new Date(displayMonth.getFullYear(), Number(value), 1));
+          }}
+        >
+          <SelectTrigger className="w-[120px] focus:ring-ring focus:ring-offset-2 focus:ring-2">
+            <SelectValue placeholder={format(displayMonth, "MMMM")} />
+          </SelectTrigger>
+          <SelectContent>
+            {months.map((month) => (
+              <SelectItem key={month} value={month.toString()}>
+                {format(new Date(2000, month), "MMMM")}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <Select
+          value={displayMonth.getFullYear().toString()}
+          onValueChange={(value) => {
+            goToMonth(new Date(Number(value), displayMonth.getMonth(), 1));
+          }}
+        >
+          <SelectTrigger className="w-[100px] focus:ring-ring focus:ring-offset-2 focus:ring-2">
+            <SelectValue placeholder={displayMonth.getFullYear().toString()} />
+          </SelectTrigger>
+          <SelectContent>
+            {years.map((year) => (
+              <SelectItem key={year} value={year.toString()}>
+                {year}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+      <div className="flex items-center gap-1">
+        <button
+          type="button"
+          aria-label="Go to previous month"
+          onClick={() => previousMonth && goToMonth(previousMonth)}
+          disabled={!previousMonth}
+          className={cn(buttonVariants({ variant: 'outline' }), 'h-8 w-8 p-0')}
+        >
+          <ChevronLeft className="h-4 w-4" />
+        </button>
+        <button
+          type="button"
+          aria-label="Go to next month"
+          onClick={() => nextMonth && goToMonth(nextMonth)}
+          disabled={!nextMonth}
+          className={cn(buttonVariants({ variant: 'outline' }), 'h-8 w-8 p-0')}
+        >
+          <ChevronRight className="h-4 w-4" />
+        </button>
+      </div>
+    </div>
+  );
+}
 
 export { Calendar }
