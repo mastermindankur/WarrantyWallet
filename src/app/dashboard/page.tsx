@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useEffect, useState } from 'react';
@@ -31,15 +32,25 @@ export default function Dashboard() {
     try {
       const q = query(collection(db, 'warranties'), where('userId', '==', user.uid));
       const querySnapshot = await getDocs(q);
-      const fetchedWarranties = querySnapshot.docs.map((doc) => {
-        const data = doc.data();
-        return {
-          id: doc.id,
-          ...data,
-          purchaseDate: (data.purchaseDate as Timestamp).toDate(),
-          expiryDate: (data.expiryDate as Timestamp).toDate(),
-        } as Warranty;
-      });
+      const fetchedWarranties = querySnapshot.docs
+        .map((doc) => {
+          const data = doc.data();
+          
+          // Defensive check for Timestamp fields to prevent crashes on malformed data
+          if (!(data.purchaseDate && typeof data.purchaseDate.toDate === 'function') || !(data.expiryDate && typeof data.expiryDate.toDate === 'function')) {
+            console.warn(`Skipping warranty with invalid date format: ${doc.id}`);
+            return null;
+          }
+
+          return {
+            id: doc.id,
+            ...data,
+            purchaseDate: (data.purchaseDate as Timestamp).toDate(),
+            expiryDate: (data.expiryDate as Timestamp).toDate(),
+          } as Warranty;
+        })
+        .filter((w): w is Warranty => w !== null);
+
       setWarranties(fetchedWarranties);
     } catch (err) {
       console.error('Error fetching warranties:', err);
