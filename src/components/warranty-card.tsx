@@ -154,7 +154,7 @@ export default function WarrantyCard({ warranty, onUpdate }: WarrantyCardProps) 
   return (
     <Card className={cn(
         "flex flex-col overflow-hidden transition-all duration-300",
-        !hasExpired && "hover:shadow-lg hover:-translate-y-1",
+        "hover:shadow-lg hover:-translate-y-1",
         hasExpired && "bg-muted/40 opacity-80"
       )}>
       <CardHeader>
