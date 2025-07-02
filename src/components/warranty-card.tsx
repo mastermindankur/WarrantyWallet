@@ -37,6 +37,7 @@ import {
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
 import { WarrantyFormDialog } from './warranty-form-dialog';
+import { Badge } from '@/components/ui/badge';
 
 interface WarrantyCardProps {
   warranty: Warranty;
@@ -153,9 +154,8 @@ export default function WarrantyCard({ warranty, onUpdate }: WarrantyCardProps) 
 
   return (
     <Card className={cn(
-        "flex flex-col overflow-hidden transition-all duration-300",
-        "hover:shadow-lg hover:-translate-y-1",
-        hasExpired && "bg-muted/40 opacity-80"
+        "flex flex-col overflow-hidden transition-all duration-300 hover:shadow-lg",
+        hasExpired ? "bg-muted/50" : "hover:-translate-y-1"
       )}>
       <CardHeader>
         <div className="flex items-start justify-between">
@@ -171,8 +171,15 @@ export default function WarrantyCard({ warranty, onUpdate }: WarrantyCardProps) 
       </CardHeader>
       <CardContent className="flex-grow">
         <div className="space-y-4">
-            <div className={cn('font-medium', getExpiryColor())}>
-                {formatRemainingTime(expiryDate)}
+            <div className="flex items-center gap-2">
+              <div className={cn('font-medium', getExpiryColor())}>
+                  {formatRemainingTime(expiryDate)}
+              </div>
+              {hasExpired && (
+                <Badge variant="outline" className="border-destructive text-destructive">
+                  Expired
+                </Badge>
+              )}
             </div>
             <div className="flex items-center space-x-4 text-sm text-muted-foreground">
                 {invoiceKey && (
