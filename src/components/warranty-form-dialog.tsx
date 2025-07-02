@@ -106,13 +106,10 @@ export function WarrantyFormDialog({ children, warranty, onSave }: WarrantyFormD
 
       const parseDate = (dateString: string | undefined): Date | null => {
         if (!dateString) return null;
-        // Handle YYYY-MM-DD and YYYY-MM-DDTHH:mm:ss.sssZ formats by taking only the date part
         const datePart = dateString.split('T')[0];
         const [year, month, day] = datePart.split('-').map(Number);
         
-        // Check if all parts are valid numbers
         if (!isNaN(year) && !isNaN(month) && !isNaN(day) && month > 0 && day > 0) {
-            // Using Date.UTC is safer for timezone issues than new Date('YYYY-MM-DD')
             const date = new Date(Date.UTC(year, month - 1, day));
             if (isValid(date)) {
                 return date;
@@ -122,22 +119,20 @@ export function WarrantyFormDialog({ children, warranty, onSave }: WarrantyFormD
       }
 
       const purchaseDate = parseDate(warrantyResult.purchaseDate);
+      const expiryDate = parseDate(warrantyResult.expiryDate);
 
       if (purchaseDate) {
         form.setValue('purchaseDate', purchaseDate, { shouldValidate: true });
         reasoningParts.push('AI detected the purchase date.');
-        
-        // With a valid purchase date, we can now determine the expiry date.
-        const expiryDate = parseDate(warrantyResult.expiryDate);
+      }
 
-        if (expiryDate) {
-            form.setValue('expiryDate', expiryDate, { shouldValidate: true });
-            reasoningParts.push('AI detected the expiry date.');
-        } else if (warrantyResult.warrantyPeriodMonths) {
-            const calculatedExpiryDate = addMonths(purchaseDate, warrantyResult.warrantyPeriodMonths);
-            form.setValue('expiryDate', calculatedExpiryDate, { shouldValidate: true });
-            reasoningParts.push(`AI calculated expiry from a ${warrantyResult.warrantyPeriodMonths}-month warranty.`);
-        }
+      if (expiryDate) {
+        form.setValue('expiryDate', expiryDate, { shouldValidate: true });
+        reasoningParts.push('AI detected the expiry date.');
+      } else if (purchaseDate && warrantyResult.warrantyPeriodMonths) {
+        const calculatedExpiryDate = addMonths(purchaseDate, warrantyResult.warrantyPeriodMonths);
+        form.setValue('expiryDate', calculatedExpiryDate, { shouldValidate: true });
+        reasoningParts.push(`AI calculated expiry from a ${warrantyResult.warrantyPeriodMonths}-month warranty.`);
       }
 
       const confidenceText = `(Confidence: ${Math.round(warrantyResult.confidenceScore * 100)}%)`;
