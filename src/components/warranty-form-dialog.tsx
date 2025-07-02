@@ -99,27 +99,39 @@ export function WarrantyFormDialog({ children, warranty, onSave }: WarrantyFormD
         warnShortWarranties({ invoiceDataUri, warrantyCardDataUri, productDescription: productName }),
       ]);
       
-      let reasoningParts: string[] = [];
-      if (warrantyResult.reasoning) {
-        reasoningParts.push(warrantyResult.reasoning);
-      }
-
       const parseDate = (dateString: string | undefined): Date | null => {
         if (!dateString) return null;
+
+        // First, try to parse the strict YYYY-MM-DD format to avoid timezone issues.
         const datePart = dateString.split('T')[0];
-        const [year, month, day] = datePart.split('-').map(Number);
-        
-        if (!isNaN(year) && !isNaN(month) && !isNaN(day) && month > 0 && day > 0) {
+        const match = datePart.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+        if (match) {
+            const [, year, month, day] = match.map(Number);
             const date = new Date(Date.UTC(year, month - 1, day));
             if (isValid(date)) {
                 return date;
             }
         }
+
+        // If strict parse fails, try the more general parser.
+        // This is less reliable with timezones but more flexible with formats.
+        const flexibleDate = new Date(dateString);
+        if (isValid(flexibleDate)) {
+            // We got a date, but it might be off by a day due to timezone.
+            // Let's adjust it back to UTC midnight.
+            return new Date(Date.UTC(flexibleDate.getFullYear(), flexibleDate.getMonth(), flexibleDate.getDate()));
+        }
+
         return null;
       }
 
       const purchaseDate = parseDate(warrantyResult.purchaseDate);
       const expiryDate = parseDate(warrantyResult.expiryDate);
+      
+      let reasoningParts: string[] = [];
+      if (warrantyResult.reasoning) {
+        reasoningParts.push(warrantyResult.reasoning);
+      }
 
       if (purchaseDate) {
         form.setValue('purchaseDate', purchaseDate, { shouldValidate: true });
