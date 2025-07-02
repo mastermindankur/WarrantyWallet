@@ -33,6 +33,7 @@ import { warnShortWarranties } from '@/ai/flows/warn-short-warranties';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/auth-context';
 import { db } from '@/lib/firebase';
+import { uploadFileToS3 } from '@/app/actions/upload-action';
 
 const FormSchema = z.object({
   productName: z.string().min(2, 'Product name must be at least 2 characters.'),
@@ -106,12 +107,10 @@ export function WarrantyFormDialog({ children, warranty, onSave }: WarrantyFormD
       
       const parseDate = (dateString: string | undefined): Date | null => {
         if (!dateString) return null;
-        // Try parsing YYYY-MM-DD first
         let d = parse(dateString, 'yyyy-MM-dd', new Date());
         if (isValid(d)) {
           return new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
         }
-        // Fallback to more general parsing
         d = new Date(dateString);
         if (isValid(d)) {
           return new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
@@ -172,41 +171,25 @@ export function WarrantyFormDialog({ children, warranty, onSave }: WarrantyFormD
     }
     
     setIsSaving(true);
-
-    const chunkString = (str: string, size: number): string[] => {
-        const numChunks = Math.ceil(str.length / size);
-        const chunks = new Array(numChunks);
-        for (let i = 0, o = 0; i < numChunks; ++i, o += size) {
-            chunks[i] = str.substr(o, size);
-        }
-        return chunks;
-    };
-    const MAX_CHUNK_SIZE = 1024 * 900; // ~900KB to stay safely under Firestore's 1MB limit
     
     try {
       const docRef = warranty?.id
         ? doc(db, 'warranties', warranty.id)
         : doc(collection(db, 'warranties'));
       
-      let invoiceImageChunks: string[] | undefined = warranty?.invoiceImageChunks;
-      let warrantyCardImageChunks: string[] | undefined = warranty?.warrantyCardImageChunks;
+      let invoiceImageUrl = warranty?.invoiceImage;
+      let warrantyCardImageUrl = warranty?.warrantyCardImage;
 
       const invoiceFile = data.invoice?.[0];
       if (invoiceFile) {
         const dataUri = await fileToDataUri(invoiceFile);
-        if (dataUri.length > MAX_CHUNK_SIZE * 10) { // Limit to ~9MB to avoid extreme chunking
-           throw new Error("Invoice file is too large. Please use a smaller file.");
-        }
-        invoiceImageChunks = chunkString(dataUri, MAX_CHUNK_SIZE);
+        invoiceImageUrl = await uploadFileToS3(user.uid, docRef.id, dataUri, invoiceFile.name);
       }
       
       const warrantyCardFile = data.warrantyCard?.[0];
       if (warrantyCardFile) {
         const dataUri = await fileToDataUri(warrantyCardFile);
-         if (dataUri.length > MAX_CHUNK_SIZE * 10) { // Limit to ~9MB to avoid extreme chunking
-           throw new Error("Warranty card file is too large. Please use a smaller file.");
-        }
-        warrantyCardImageChunks = chunkString(dataUri, MAX_CHUNK_SIZE);
+        warrantyCardImageUrl = await uploadFileToS3(user.uid, docRef.id, dataUri, warrantyCardFile.name);
       }
       
       const warrantyDataForDb = {
@@ -216,8 +199,8 @@ export function WarrantyFormDialog({ children, warranty, onSave }: WarrantyFormD
         purchaseDate: data.purchaseDate,
         expiryDate: data.expiryDate,
         notes: data.notes || '',
-        invoiceImageChunks: invoiceImageChunks || [],
-        warrantyCardImageChunks: warrantyCardImageChunks || [],
+        invoiceImage: invoiceImageUrl || null,
+        warrantyCardImage: warrantyCardImageUrl || null,
       };
       
       await setDoc(docRef, warrantyDataForDb, { merge: true });
@@ -233,7 +216,7 @@ export function WarrantyFormDialog({ children, warranty, onSave }: WarrantyFormD
       toast({
         variant: 'destructive',
         title: 'Save Failed',
-        description: error.message || 'There was an error saving your warranty. The file might be too large.',
+        description: error.message || 'There was an error saving your warranty.',
       });
     } finally {
       setIsSaving(false);
