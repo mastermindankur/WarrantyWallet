@@ -58,12 +58,12 @@ export default function WarrantyCard({ warranty }: WarrantyCardProps) {
             </div>
             <div className="flex items-center space-x-4 text-sm text-muted-foreground">
                 {invoiceImage && (
-                <a href="#" className="flex items-center gap-1 hover:text-primary">
+                <a href={invoiceImage} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 hover:text-primary">
                     <FileText className="h-4 w-4" /> Invoice
                 </a>
                 )}
                 {warrantyCardImage && (
-                <a href="#" className="flex items-center gap-1 hover:text-primary">
+                <a href={warrantyCardImage} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 hover:text-primary">
                     <FileText className="h-4 w-4" /> Warranty Card
                 </a>
                 )}

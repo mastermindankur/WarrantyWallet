@@ -7,6 +7,8 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { addMonths, format, isValid } from 'date-fns';
 import { CalendarIcon, Loader2, AlertTriangle, Sparkles } from 'lucide-react';
+import { doc, setDoc, collection } from 'firebase/firestore';
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 
 import { Button } from '@/components/ui/button';
 import {
@@ -30,6 +32,8 @@ import type { Warranty, WarrantyCategory } from '@/lib/types';
 import { detectWarrantyPeriod } from '@/ai/flows/detect-warranty-period';
 import { warnShortWarranties } from '@/ai/flows/warn-short-warranties';
 import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/contexts/auth-context';
+import { db, storage } from '@/lib/firebase';
 
 const FormSchema = z.object({
   productName: z.string().min(2, 'Product name must be at least 2 characters.'),
@@ -52,9 +56,11 @@ interface WarrantyFormDialogProps {
 export function WarrantyFormDialog({ children, warranty, onSave }: WarrantyFormDialogProps) {
   const [open, setOpen] = useState(false);
   const [isAiRunning, setIsAiRunning] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
   const [aiWarning, setAiWarning] = useState<string | null>(null);
   const [aiReasoning, setAiReasoning] = useState<string | null>(null);
   const { toast } = useToast();
+  const { user } = useAuth();
 
   const form = useForm<FormValues>({
     resolver: zodResolver(FormSchema),
@@ -101,39 +107,38 @@ export function WarrantyFormDialog({ children, warranty, onSave }: WarrantyFormD
       
       const parseDate = (dateString: string | undefined): Date | null => {
         if (!dateString) return null;
-
-        // The AI can return various formats, so we try a general-purpose parser.
-        // new Date() is surprisingly robust for this.
         const flexibleDate = new Date(dateString);
         if (isValid(flexibleDate)) {
-            // We got a date, but it might be off by a day due to timezone.
-            // To fix this, we create the date in UTC to ignore local timezone offsets.
             return new Date(Date.UTC(flexibleDate.getFullYear(), flexibleDate.getMonth(), flexibleDate.getDate()));
         }
-
         return null;
       }
 
-      const purchaseDate = parseDate(warrantyResult.purchaseDate);
-      const expiryDate = parseDate(warrantyResult.expiryDate);
-      
       let reasoningParts: string[] = [];
       if (warrantyResult.reasoning) {
         reasoningParts.push(warrantyResult.reasoning);
       }
-
+      
+      const purchaseDate = parseDate(warrantyResult.purchaseDate);
       if (purchaseDate) {
         form.setValue('purchaseDate', purchaseDate, { shouldValidate: true });
         reasoningParts.push('AI detected the purchase date.');
-      }
-
-      if (expiryDate) {
-        form.setValue('expiryDate', expiryDate, { shouldValidate: true });
-        reasoningParts.push('AI detected the expiry date.');
-      } else if (purchaseDate && warrantyResult.warrantyPeriodMonths) {
-        const calculatedExpiryDate = addMonths(purchaseDate, warrantyResult.warrantyPeriodMonths);
-        form.setValue('expiryDate', calculatedExpiryDate, { shouldValidate: true });
-        reasoningParts.push(`AI calculated expiry from a ${warrantyResult.warrantyPeriodMonths}-month warranty.`);
+        
+        const expiryDate = parseDate(warrantyResult.expiryDate);
+        if (expiryDate) {
+          form.setValue('expiryDate', expiryDate, { shouldValidate: true });
+          reasoningParts.push('AI detected the expiry date.');
+        } else if (warrantyResult.warrantyPeriodMonths) {
+          const calculatedExpiryDate = addMonths(purchaseDate, warrantyResult.warrantyPeriodMonths);
+          form.setValue('expiryDate', calculatedExpiryDate, { shouldValidate: true });
+          reasoningParts.push(`AI calculated expiry from a ${warrantyResult.warrantyPeriodMonths}-month warranty.`);
+        }
+      } else {
+        const expiryDate = parseDate(warrantyResult.expiryDate);
+        if (expiryDate) {
+          form.setValue('expiryDate', expiryDate, { shouldValidate: true });
+          reasoningParts.push('AI detected the expiry date.');
+        }
       }
 
       const confidenceText = `(Confidence: ${Math.round(warrantyResult.confidenceScore * 100)}%)`;
@@ -156,26 +161,65 @@ export function WarrantyFormDialog({ children, warranty, onSave }: WarrantyFormD
   };
 
   const onSubmit = async (data: FormValues) => {
-    const newWarrantyData: Partial<Warranty> & Pick<Warranty, 'id'> = {
-      id: warranty?.id || Date.now().toString(),
-      productName: data.productName,
-      category: data.category,
-      purchaseDate: data.purchaseDate,
-      expiryDate: data.expiryDate,
-      notes: data.notes,
-    };
-
-    if (data.invoice?.[0]) {
-      newWarrantyData.invoiceImage = await fileToDataUri(data.invoice[0]);
+    if (!user || !storage || !db) {
+      toast({
+        variant: 'destructive',
+        title: 'Authentication Error',
+        description: 'You must be logged in to save a warranty.',
+      });
+      return;
     }
     
-    if (data.warrantyCard?.[0]) {
-      newWarrantyData.warrantyCardImage = await fileToDataUri(data.warrantyCard[0]);
+    setIsSaving(true);
+    
+    try {
+      const warrantyId = warranty?.id || doc(collection(db, 'warranties')).id;
+      let invoiceImageUri: string | undefined = warranty?.invoiceImage;
+      let warrantyCardImageUri: string | undefined = warranty?.warrantyCardImage;
+      
+      const invoiceFile = data.invoice?.[0];
+      if (invoiceFile) {
+        const storageRef = ref(storage, `warranties/${user.uid}/${warrantyId}/${invoiceFile.name}`);
+        const snapshot = await uploadBytes(storageRef, invoiceFile);
+        invoiceImageUri = await getDownloadURL(snapshot.ref);
+      }
+      
+      const warrantyCardFile = data.warrantyCard?.[0];
+      if (warrantyCardFile) {
+        const storageRef = ref(storage, `warranties/${user.uid}/${warrantyId}/${warrantyCardFile.name}`);
+        const snapshot = await uploadBytes(storageRef, warrantyCardFile);
+        warrantyCardImageUri = await getDownloadURL(snapshot.ref);
+      }
+      
+      const warrantyDataForDb = {
+        userId: user.uid,
+        productName: data.productName,
+        category: data.category,
+        purchaseDate: data.purchaseDate,
+        expiryDate: data.expiryDate,
+        notes: data.notes || '',
+        invoiceImage: invoiceImageUri || '',
+        warrantyCardImage: warrantyCardImageUri || '',
+      };
+      
+      await setDoc(doc(db, 'warranties', warrantyId), warrantyDataForDb);
+      
+      onSave({ ...warrantyDataForDb, id: warrantyId });
+      
+      toast({ title: 'Success', description: 'Your warranty has been saved.' });
+      setOpen(false);
+      form.reset();
+      
+    } catch (error) {
+      console.error('Error saving warranty:', error);
+      toast({
+        variant: 'destructive',
+        title: 'Save Failed',
+        description: 'There was an error saving your warranty. Please try again.',
+      });
+    } finally {
+      setIsSaving(false);
     }
-
-    onSave(newWarrantyData as Warranty);
-    setOpen(false);
-    form.reset();
   };
 
   return (
@@ -384,7 +428,10 @@ export function WarrantyFormDialog({ children, warranty, onSave }: WarrantyFormD
 
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => setOpen(false)}>Cancel</Button>
-              <Button type="submit">Save Warranty</Button>
+              <Button type="submit" disabled={isSaving || isAiRunning}>
+                {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                Save Warranty
+              </Button>
             </DialogFooter>
           </form>
         </Form>
