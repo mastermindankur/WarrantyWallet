@@ -9,6 +9,7 @@ export const mockWarranties: Warranty[] = [
     expiryDate: new Date('2025-08-14'),
     invoiceImage: 'https://placehold.co/600x400.png',
     warrantyCardImage: 'https://placehold.co/600x400.png',
+    notes: 'Purchased from official store. Extended warranty bought.',
   },
   {
     id: '2',
@@ -17,6 +18,7 @@ export const mockWarranties: Warranty[] = [
     purchaseDate: new Date('2022-12-01'),
     expiryDate: new Date('2024-11-30'),
     invoiceImage: 'https://placehold.co/600x400.png',
+    notes: 'Model XYZ-123. Delivery was on Dec 3rd.',
   },
   {
     id: '3',
@@ -25,6 +27,7 @@ export const mockWarranties: Warranty[] = [
     purchaseDate: new Date('2024-01-20'),
     expiryDate: new Date('2029-01-19'),
     warrantyCardImage: 'https://placehold.co/600x400.png',
+    notes: 'Lifetime warranty on frame.',
   },
   {
     id: '4',
@@ -34,6 +37,7 @@ export const mockWarranties: Warranty[] = [
     expiryDate: new Date('2025-05-09'),
     invoiceImage: 'https://placehold.co/600x400.png',
     warrantyCardImage: 'https://placehold.co/600x400.png',
+    notes: '',
   },
     {
     id: '5',
@@ -42,6 +46,7 @@ export const mockWarranties: Warranty[] = [
     purchaseDate: new Date('2024-06-01'),
     expiryDate: new Date('2024-12-01'),
     invoiceImage: 'https://placehold.co/600x400.png',
+    notes: 'This was a gift.',
   },
   {
     id: '6',
@@ -51,5 +56,6 @@ export const mockWarranties: Warranty[] = [
     expiryDate: new Date('2024-02-28'),
     invoiceImage: 'https://placehold.co/600x400.png',
     warrantyCardImage: 'https://placehold.co/600x400.png',
+    notes: 'Warranty void if submerged in water.',
   },
 ];

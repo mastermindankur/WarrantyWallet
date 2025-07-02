@@ -20,6 +20,7 @@ import {
 } from '@/components/ui/dialog';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -33,6 +34,7 @@ import { useToast } from '@/hooks/use-toast';
 const FormSchema = z.object({
   productName: z.string().min(2, 'Product name must be at least 2 characters.'),
   category: z.enum(['Electronics', 'Appliances', 'Furniture', 'Vehicles', 'Other']),
+  notes: z.string().optional(),
   purchaseDate: z.date(),
   expiryDate: z.date(),
   invoice: z.any().optional(),
@@ -61,6 +63,7 @@ export function WarrantyFormDialog({ children, warranty, onSave }: WarrantyFormD
       category: warranty?.category || 'Electronics',
       purchaseDate: warranty?.purchaseDate || new Date(),
       expiryDate: warranty?.expiryDate || addMonths(new Date(), 12),
+      notes: warranty?.notes || '',
     },
   });
 
@@ -148,6 +151,7 @@ export function WarrantyFormDialog({ children, warranty, onSave }: WarrantyFormD
       category: data.category,
       purchaseDate: data.purchaseDate,
       expiryDate: data.expiryDate,
+      notes: data.notes,
     };
 
     if (data.invoice?.[0]) {
@@ -206,6 +210,23 @@ export function WarrantyFormDialog({ children, warranty, onSave }: WarrantyFormD
                       ))}
                     </SelectContent>
                   </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="notes"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Notes (Optional)</FormLabel>
+                  <FormControl>
+                    <Textarea
+                      placeholder="Add any notes, e.g. gift receipt, special conditions..."
+                      {...field}
+                    />
+                  </FormControl>
                   <FormMessage />
                 </FormItem>
               )}

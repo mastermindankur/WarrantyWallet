@@ -13,6 +13,7 @@ import {
   Pencil,
   Trash2,
   CalendarClock,
+  NotebookText,
 } from 'lucide-react';
 import type { Warranty } from '@/lib/types';
 import { cn } from '@/lib/utils';
@@ -23,7 +24,7 @@ interface WarrantyCardProps {
 }
 
 export default function WarrantyCard({ warranty }: WarrantyCardProps) {
-  const { productName, category, expiryDate, invoiceImage, warrantyCardImage } = warranty;
+  const { productName, category, expiryDate, invoiceImage, warrantyCardImage, notes } = warranty;
   const hasExpired = isPast(expiryDate);
   const timeLeft = formatDistanceToNow(expiryDate, { addSuffix: true });
 
@@ -67,6 +68,12 @@ export default function WarrantyCard({ warranty }: WarrantyCardProps) {
                 </a>
                 )}
             </div>
+            {notes && (
+                <div className="pt-2 text-sm border-t mt-2">
+                    <h4 className="font-medium text-foreground flex items-center gap-2"><NotebookText className="h-4 w-4" /> Notes</h4>
+                    <p className="pt-1 text-muted-foreground whitespace-pre-wrap">{notes}</p>
+                </div>
+            )}
         </div>
       </CardContent>
       <CardFooter className="bg-slate-50/50 p-2 dark:bg-slate-900/50">

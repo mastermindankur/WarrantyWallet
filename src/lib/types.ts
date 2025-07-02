@@ -8,4 +8,5 @@ export interface Warranty {
   expiryDate: Date;
   invoiceImage?: string;
   warrantyCardImage?: string;
+  notes?: string;
 }
