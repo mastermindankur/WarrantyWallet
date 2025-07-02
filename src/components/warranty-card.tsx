@@ -21,19 +21,34 @@ import type { Warranty } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import CategoryIcon from './category-icon';
 import { getPresignedUrl } from '@/app/actions/upload-action';
+import { deleteWarranty } from '@/app/actions/warranty-actions';
 import { useToast } from '@/hooks/use-toast';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
+import { WarrantyFormDialog } from './warranty-form-dialog';
 
 interface WarrantyCardProps {
   warranty: Warranty;
+  onUpdate: () => void;
 }
 
-export default function WarrantyCard({ warranty }: WarrantyCardProps) {
-  const { productName, category, expiryDate, invoiceKey, warrantyCardKey, notes } = warranty;
+export default function WarrantyCard({ warranty, onUpdate }: WarrantyCardProps) {
+  const { id, productName, category, expiryDate, invoiceKey, warrantyCardKey, notes } = warranty;
   const hasExpired = isPast(expiryDate);
   const timeLeft = formatDistanceToNow(expiryDate, { addSuffix: true });
 
   const [isLoadingInvoice, setIsLoadingInvoice] = useState(false);
   const [isLoadingCard, setIsLoadingCard] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
   const { toast } = useToast();
 
   const getExpiryColor = () => {
@@ -66,6 +81,36 @@ export default function WarrantyCard({ warranty }: WarrantyCardProps) {
         else setIsLoadingCard(false);
     }
   }
+
+  const handleDelete = async () => {
+    setIsDeleting(true);
+    try {
+      const result = await deleteWarranty({
+        warrantyId: id,
+        invoiceKey,
+        warrantyCardKey,
+      });
+
+      if (result.success) {
+        toast({
+          title: 'Success',
+          description: result.message,
+        });
+        onUpdate();
+      } else {
+        throw new Error(result.message);
+      }
+    } catch (error: any) {
+      console.error('Failed to delete warranty:', error);
+      toast({
+        variant: 'destructive',
+        title: 'Delete Failed',
+        description: error.message || 'Could not delete the warranty. Please try again.',
+      });
+    } finally {
+      setIsDeleting(false);
+    }
+  };
 
   return (
     <Card className="flex flex-col overflow-hidden transition-all duration-300 hover:shadow-lg hover:-translate-y-1">
@@ -110,12 +155,35 @@ export default function WarrantyCard({ warranty }: WarrantyCardProps) {
       </CardContent>
       <CardFooter className="bg-slate-50/50 p-2 dark:bg-slate-900/50">
         <div className="flex w-full justify-end gap-2">
-            <Button variant="ghost" size="sm" className="flex items-center gap-2">
-                <Pencil className="h-4 w-4" /> Edit
-            </Button>
-            <Button variant="ghost" size="sm" className="flex items-center gap-2 text-destructive hover:text-destructive">
-                <Trash2 className="h-4 w-4" /> Delete
-            </Button>
+            <WarrantyFormDialog warranty={warranty} onSave={onUpdate}>
+              <Button variant="ghost" size="sm" className="flex items-center gap-2">
+                  <Pencil className="h-4 w-4" /> Edit
+              </Button>
+            </WarrantyFormDialog>
+
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button variant="ghost" size="sm" className="flex items-center gap-2 text-destructive hover:text-destructive" disabled={isDeleting}>
+                  {isDeleting ? <Loader2 className="animate-spin" /> : <Trash2 className="h-4 w-4" />}
+                  Delete
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    This action cannot be undone. This will permanently delete your
+                    warranty and any associated files from the servers.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                  <AlertDialogAction onClick={handleDelete} className="bg-destructive hover:bg-destructive/90">
+                    Yes, delete it
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
         </div>
       </CardFooter>
     </Card>

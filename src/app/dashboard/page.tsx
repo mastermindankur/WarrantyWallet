@@ -69,7 +69,7 @@ export default function Dashboard() {
   const sortedWarranties = [...warranties].sort((a, b) => {
     const dateA = a.expiryDate.getTime();
     const dateB = b.expiryDate.getTime();
-    return sortOrder === 'asc' ? dateA - dateB : dateB - dateA;
+    return sortOrder === 'asc' ? dateA - dateB : dateB - a;
   });
 
   const handleWarrantyUpdate = () => {
@@ -116,7 +116,7 @@ export default function Dashboard() {
     return (
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
         {sortedWarranties.map((warranty) => (
-          <WarrantyCard key={warranty.id} warranty={warranty} />
+          <WarrantyCard key={warranty.id} warranty={warranty} onUpdate={handleWarrantyUpdate} />
         ))}
       </div>
     );
