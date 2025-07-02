@@ -1,8 +1,7 @@
 'use server';
 
 import { S3Client, DeleteObjectCommand } from '@aws-sdk/client-s3';
-import { doc, deleteDoc } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
+// Firestore-related imports are no longer needed here.
 
 let s3Client: S3Client | null = null;
 
@@ -34,24 +33,18 @@ async function deleteFileFromS3(key: string) {
         await s3Client.send(new DeleteObjectCommand(params));
     } catch (error) {
         console.error(`Failed to delete file ${key} from S3:`, error);
-        // We will not throw an error here, to allow Firestore deletion to proceed even if S3 file deletion fails.
-        // This prevents orphaned Firestore documents if S3 permissions are misconfigured.
+        // We will not throw an error here, to allow the primary record deletion to proceed 
+        // even if S3 file deletion fails (e.g., due to permissions).
     }
 }
 
-interface DeleteWarrantyParams {
-    warrantyId: string;
+interface DeleteWarrantyFilesParams {
     invoiceKey?: string;
     warrantyCardKey?: string;
 }
 
-export async function deleteWarranty({ warrantyId, invoiceKey, warrantyCardKey }: DeleteWarrantyParams): Promise<{ success: boolean; message: string }> {
-    if (!db) {
-        return { success: false, message: 'Firebase is not configured.' };
-    }
-
+export async function deleteWarrantyFiles({ invoiceKey, warrantyCardKey }: DeleteWarrantyFilesParams): Promise<{ success: boolean; message: string }> {
     try {
-        // Attempt to delete files from S3 first. This is non-critical; we prioritize deleting the DB record.
         if (invoiceKey) {
             await deleteFileFromS3(invoiceKey);
         }
@@ -59,12 +52,9 @@ export async function deleteWarranty({ warrantyId, invoiceKey, warrantyCardKey }
             await deleteFileFromS3(warrantyCardKey);
         }
 
-        // Delete the document from Firestore
-        await deleteDoc(doc(db, 'warranties', warrantyId));
-
-        return { success: true, message: 'Warranty deleted successfully.' };
+        return { success: true, message: 'Associated files deleted.' };
     } catch (error: any) {
-        console.error('Error deleting warranty:', error);
-        return { success: false, message: error.message || 'An unexpected error occurred during deletion.' };
+        console.error('Error deleting warranty files from S3:', error);
+        return { success: false, message: error.message || 'An unexpected error occurred during file deletion.' };
     }
 }

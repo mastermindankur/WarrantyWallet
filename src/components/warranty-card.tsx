@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { format, formatDistanceToNow, isPast } from 'date-fns';
+import { doc, deleteDoc } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
 import {
   Card,
@@ -19,9 +20,10 @@ import {
 } from 'lucide-react';
 import type { Warranty } from '@/lib/types';
 import { cn } from '@/lib/utils';
+import { db } from '@/lib/firebase';
 import CategoryIcon from './category-icon';
 import { getPresignedUrl } from '@/app/actions/upload-action';
-import { deleteWarranty } from '@/app/actions/warranty-actions';
+import { deleteWarrantyFiles } from '@/app/actions/warranty-actions';
 import { useToast } from '@/hooks/use-toast';
 import {
   AlertDialog,
@@ -85,21 +87,26 @@ export default function WarrantyCard({ warranty, onUpdate }: WarrantyCardProps) 
   const handleDelete = async () => {
     setIsDeleting(true);
     try {
-      const result = await deleteWarranty({
-        warrantyId: id,
+      // First, attempt to delete associated files from S3 via the server action.
+      // We proceed even if this fails to ensure the primary database record is removed.
+      await deleteWarrantyFiles({
         invoiceKey,
         warrantyCardKey,
       });
 
-      if (result.success) {
-        toast({
-          title: 'Success',
-          description: result.message,
-        });
-        onUpdate();
-      } else {
-        throw new Error(result.message);
+      // Then, delete the document from Firestore on the client-side.
+      // This ensures the request is authenticated with the current user's credentials.
+      if (!db) {
+        throw new Error('Firebase is not configured.');
       }
+      await deleteDoc(doc(db, 'warranties', id));
+
+      toast({
+        title: 'Success',
+        description: 'Warranty deleted successfully.',
+      });
+      onUpdate();
+
     } catch (error: any) {
       console.error('Failed to delete warranty:', error);
       toast({
