@@ -50,7 +50,7 @@ type FormValues = z.infer<typeof FormSchema>;
 interface WarrantyFormDialogProps {
   children: ReactNode;
   warranty?: Warranty;
-  onSave: (data: Warranty) => void;
+  onSave: () => void;
 }
 
 export function WarrantyFormDialog({ children, warranty, onSave }: WarrantyFormDialogProps) {
@@ -120,11 +120,12 @@ export function WarrantyFormDialog({ children, warranty, onSave }: WarrantyFormD
       }
       
       const purchaseDate = parseDate(warrantyResult.purchaseDate);
+      const expiryDate = parseDate(warrantyResult.expiryDate);
+
       if (purchaseDate) {
         form.setValue('purchaseDate', purchaseDate, { shouldValidate: true });
         reasoningParts.push('AI detected the purchase date.');
         
-        const expiryDate = parseDate(warrantyResult.expiryDate);
         if (expiryDate) {
           form.setValue('expiryDate', expiryDate, { shouldValidate: true });
           reasoningParts.push('AI detected the expiry date.');
@@ -133,12 +134,9 @@ export function WarrantyFormDialog({ children, warranty, onSave }: WarrantyFormD
           form.setValue('expiryDate', calculatedExpiryDate, { shouldValidate: true });
           reasoningParts.push(`AI calculated expiry from a ${warrantyResult.warrantyPeriodMonths}-month warranty.`);
         }
-      } else {
-        const expiryDate = parseDate(warrantyResult.expiryDate);
-        if (expiryDate) {
-          form.setValue('expiryDate', expiryDate, { shouldValidate: true });
-          reasoningParts.push('AI detected the expiry date.');
-        }
+      } else if (expiryDate) {
+        form.setValue('expiryDate', expiryDate, { shouldValidate: true });
+        reasoningParts.push('AI detected the expiry date.');
       }
 
       const confidenceText = `(Confidence: ${Math.round(warrantyResult.confidenceScore * 100)}%)`;
@@ -204,7 +202,7 @@ export function WarrantyFormDialog({ children, warranty, onSave }: WarrantyFormD
       
       await setDoc(doc(db, 'warranties', warrantyId), warrantyDataForDb);
       
-      onSave({ ...warrantyDataForDb, id: warrantyId });
+      onSave();
       
       toast({ title: 'Success', description: 'Your warranty has been saved.' });
       setOpen(false);
