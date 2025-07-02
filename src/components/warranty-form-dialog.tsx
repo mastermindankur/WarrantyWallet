@@ -5,7 +5,7 @@ import { useState, type ReactNode } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { addMonths, format } from 'date-fns';
+import { addMonths, format, isValid } from 'date-fns';
 import { CalendarIcon, Loader2, AlertTriangle, Sparkles } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
@@ -93,7 +93,7 @@ export function WarrantyFormDialog({ children, warranty, onSave }: WarrantyFormD
         setIsAiRunning(false);
         return;
       }
-
+      
       const [warrantyResult, shortWarrantyResult] = await Promise.all([
         detectWarrantyPeriod({ invoiceDataUri, warrantyCardDataUri, productDescription: productName }),
         warnShortWarranties({ invoiceDataUri, warrantyCardDataUri, productDescription: productName }),
@@ -102,15 +102,34 @@ export function WarrantyFormDialog({ children, warranty, onSave }: WarrantyFormD
       let reasoningParts: string[] = [];
       let datesUpdated = false;
 
+      // Helper to safely parse a YYYY-MM-DD string and convert to Date object
+      // This is necessary to avoid timezone issues where new Date('YYYY-MM-DD') might result in the previous day.
+      const parseDate = (dateString: string): Date | null => {
+        const [year, month, day] = dateString.split('-').map(Number);
+        if (year && month && day) {
+            const date = new Date(year, month - 1, day);
+            if (isValid(date)) {
+                return date;
+            }
+        }
+        return null;
+      }
+
       if (warrantyResult.purchaseDate) {
-        form.setValue('purchaseDate', warrantyResult.purchaseDate, { shouldValidate: true });
-        reasoningParts.push('AI detected the purchase date.');
-        datesUpdated = true;
+        const parsedDate = parseDate(warrantyResult.purchaseDate);
+        if(parsedDate) {
+          form.setValue('purchaseDate', parsedDate, { shouldValidate: true });
+          reasoningParts.push('AI detected the purchase date.');
+          datesUpdated = true;
+        }
       }
       if (warrantyResult.expiryDate) {
-        form.setValue('expiryDate', warrantyResult.expiryDate, { shouldValidate: true });
-        reasoningParts.push('AI detected the expiry date.');
-        datesUpdated = true;
+         const parsedDate = parseDate(warrantyResult.expiryDate);
+        if(parsedDate) {
+          form.setValue('expiryDate', parsedDate, { shouldValidate: true });
+          reasoningParts.push('AI detected the expiry date.');
+          datesUpdated = true;
+        }
       }
 
       if (!datesUpdated && warrantyResult.warrantyPeriodMonths) {

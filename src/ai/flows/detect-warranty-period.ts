@@ -28,31 +28,10 @@ const DetectWarrantyPeriodInputSchema = z.object({
 });
 export type DetectWarrantyPeriodInput = z.infer<typeof DetectWarrantyPeriodInputSchema>;
 
-// This is the schema for the LLM's raw string output. We expect strings for dates.
-const LLMOutputSchema = z.object({
-  purchaseDate: z.string().optional().describe('The detected purchase date, as a string in YYYY-MM-DD format.'),
-  expiryDate: z.string().optional().describe('The detected warranty expiry date, as a string in YYYY-MM-DD format.'),
-  warrantyPeriodMonths: z
-    .number()
-    .optional()
-    .describe('The detected warranty period in months.'),
-  confidenceScore: z
-    .number()
-    .describe(
-      'A confidence score (0-1) indicating the reliability of the detected warranty period.'
-    ),
-  reasoning: z
-    .string()
-    .describe(
-      'The reasoning behind the warranty period detection, including key information extracted from the invoice.'
-    ),
-});
 
-// This is the schema for the flow's final output, which is what the client receives.
-// It uses proper Date objects, which the client-side form expects.
 const DetectWarrantyPeriodOutputSchema = z.object({
-  purchaseDate: z.date().optional().describe('The detected purchase date.'),
-  expiryDate: z.date().optional().describe('The detected warranty expiry date.'),
+  purchaseDate: z.string().optional().describe('The detected purchase date in YYYY-MM-DD format.'),
+  expiryDate: z.string().optional().describe('The detected warranty expiry date in YYYY-MM-DD format.'),
   warrantyPeriodMonths: z
     .number()
     .optional()
@@ -77,7 +56,7 @@ export async function detectWarrantyPeriod(input: DetectWarrantyPeriodInput): Pr
 const detectWarrantyPeriodPrompt = ai.definePrompt({
   name: 'detectWarrantyPeriodPrompt',
   input: {schema: DetectWarrantyPeriodInputSchema},
-  output: {schema: LLMOutputSchema}, // Use the string-based schema for the LLM
+  output: {schema: DetectWarrantyPeriodOutputSchema},
   prompt: `You are an AI assistant specialized in analyzing invoices and warranty cards to extract key information.
 
       Analyze the provided documents and product description to identify the purchase date, expiry date, and warranty period in months.
@@ -103,29 +82,15 @@ const detectWarrantyPeriodFlow = ai.defineFlow(
   {
     name: 'detectWarrantyPeriodFlow',
     inputSchema: DetectWarrantyPeriodInputSchema,
-    outputSchema: DetectWarrantyPeriodOutputSchema, // The flow itself still promises to return Date objects
+    outputSchema: DetectWarrantyPeriodOutputSchema,
   },
   async input => {
-    const {output: llmOutput} = await detectWarrantyPeriodPrompt(input);
+    const {output} = await detectWarrantyPeriodPrompt(input);
 
-    if (!llmOutput) {
+    if (!output) {
         throw new Error("AI analysis did not return a result.");
     }
     
-    // Helper to parse date strings safely.
-    const getValidDate = (dateString: string | undefined): Date | undefined => {
-        if (!dateString) return undefined;
-        // The LLM might return a full timestamp like "YYYY-MM-DD_HH:mm:ss...".
-        // We only need the date part. new Date("YYYY-MM-DD") correctly creates a Date object.
-        const date = new Date(dateString.substring(0, 10));
-        // Check for invalid date strings, which result in a Date object whose time is NaN.
-        return isNaN(date.getTime()) ? undefined : date;
-    };
-
-    return {
-        ...llmOutput,
-        purchaseDate: getValidDate(llmOutput.purchaseDate),
-        expiryDate: getValidDate(llmOutput.expiryDate),
-    };
+    return output;
   }
 );
