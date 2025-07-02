@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { format, formatDistanceToNow, isPast } from 'date-fns';
 import { Button } from '@/components/ui/button';
 import {
@@ -14,19 +15,26 @@ import {
   Trash2,
   CalendarClock,
   NotebookText,
+  Loader2,
 } from 'lucide-react';
 import type { Warranty } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import CategoryIcon from './category-icon';
+import { getPresignedUrl } from '@/app/actions/upload-action';
+import { useToast } from '@/hooks/use-toast';
 
 interface WarrantyCardProps {
   warranty: Warranty;
 }
 
 export default function WarrantyCard({ warranty }: WarrantyCardProps) {
-  const { productName, category, expiryDate, invoiceImage, warrantyCardImage, notes } = warranty;
+  const { productName, category, expiryDate, invoiceKey, warrantyCardKey, notes } = warranty;
   const hasExpired = isPast(expiryDate);
   const timeLeft = formatDistanceToNow(expiryDate, { addSuffix: true });
+
+  const [isLoadingInvoice, setIsLoadingInvoice] = useState(false);
+  const [isLoadingCard, setIsLoadingCard] = useState(false);
+  const { toast } = useToast();
 
   const getExpiryColor = () => {
     if (hasExpired) return 'text-red-500';
@@ -36,6 +44,28 @@ export default function WarrantyCard({ warranty }: WarrantyCardProps) {
     }
     return 'text-green-600';
   };
+
+  const handleViewFile = async (key: string | undefined, type: 'invoice' | 'card') => {
+    if (!key) return;
+
+    if (type === 'invoice') setIsLoadingInvoice(true);
+    else setIsLoadingCard(true);
+
+    try {
+        const url = await getPresignedUrl(key);
+        window.open(url, '_blank');
+    } catch (error) {
+        console.error("Failed to get presigned URL", error);
+        toast({
+            variant: "destructive",
+            title: "Error",
+            description: "Could not retrieve the file. Please try again.",
+        });
+    } finally {
+        if (type === 'invoice') setIsLoadingInvoice(false);
+        else setIsLoadingCard(false);
+    }
+  }
 
   return (
     <Card className="flex flex-col overflow-hidden transition-all duration-300 hover:shadow-lg hover:-translate-y-1">
@@ -57,15 +87,17 @@ export default function WarrantyCard({ warranty }: WarrantyCardProps) {
                 {hasExpired ? `Expired ${timeLeft}` : `Expires ${timeLeft}`}
             </div>
             <div className="flex items-center space-x-4 text-sm text-muted-foreground">
-                {invoiceImage && (
-                <a href={invoiceImage} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 hover:text-primary">
-                    <FileText className="h-4 w-4" /> Invoice
-                </a>
+                {invoiceKey && (
+                  <Button variant="link" className="p-0 h-auto gap-1 text-muted-foreground hover:text-primary" onClick={() => handleViewFile(invoiceKey, 'invoice')} disabled={isLoadingInvoice}>
+                      {isLoadingInvoice ? <Loader2 className="animate-spin" /> : <FileText />}
+                      Invoice
+                  </Button>
                 )}
-                {warrantyCardImage && (
-                <a href={warrantyCardImage} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 hover:text-primary">
-                    <FileText className="h-4 w-4" /> Warranty Card
-                </a>
+                {warrantyCardKey && (
+                  <Button variant="link" className="p-0 h-auto gap-1 text-muted-foreground hover:text-primary" onClick={() => handleViewFile(warrantyCardKey, 'card')} disabled={isLoadingCard}>
+                      {isLoadingCard ? <Loader2 className="animate-spin" /> : <FileText />}
+                      Warranty Card
+                  </Button>
                 )}
             </div>
             {notes && (

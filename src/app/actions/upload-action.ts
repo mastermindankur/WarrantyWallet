@@ -1,6 +1,7 @@
 'use server';
 
-import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
+import { S3Client, PutObjectCommand, GetObjectCommand } from '@aws-sdk/client-s3';
+import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { randomUUID } from 'crypto';
 
 let s3Client: S3Client | null = null;
@@ -19,6 +20,10 @@ if (
   });
 }
 
+/**
+ * Uploads a file to a private S3 bucket.
+ * @returns The S3 key of the uploaded object.
+ */
 export async function uploadFileToS3(
   userId: string,
   warrantyId: string,
@@ -43,21 +48,41 @@ export async function uploadFileToS3(
     Key: s3Key,
     Body: fileBuffer,
     ContentType: mimeType,
-    ACL: 'public-read', // Make the file publicly readable
   };
 
   try {
     await s3Client.send(new PutObjectCommand(params));
-
-    const fileUrl = `https://${process.env.AWS_S3_BUCKET_NAME}.s3.${process.env.AWS_S3_REGION}.amazonaws.com/${s3Key}`;
-    return fileUrl;
+    return s3Key; // Return the key, not a public URL
   } catch (error: any) {
     console.error('Error uploading to S3:', error);
-    // Provide a more specific error message to help with debugging.
-    // The "AccessDenied" error name is a common indicator of a permissions or public access block issue.
     const message = error.name === 'AccessDenied' 
-      ? 'Access Denied. Please check your S3 bucket permissions and public access block settings.' 
+      ? 'Access Denied. Please check your S3 bucket permissions and IAM policy.' 
       : `An AWS error occurred: ${error.name || 'Unknown'}.`;
     throw new Error(message);
   }
+}
+
+/**
+ * Generates a temporary, secure URL to access a private S3 object.
+ * @param key The S3 key of the object.
+ * @returns A presigned URL valid for a limited time.
+ */
+export async function getPresignedUrl(key: string) {
+    if (!s3Client || !process.env.AWS_S3_BUCKET_NAME) {
+        throw new Error('AWS S3 environment variables are not configured.');
+    }
+
+    const command = new GetObjectCommand({
+        Bucket: process.env.AWS_S3_BUCKET_NAME,
+        Key: key,
+    });
+
+    try {
+        // The URL will be valid for 15 minutes.
+        const url = await getSignedUrl(s3Client, command, { expiresIn: 900 });
+        return url;
+    } catch (error) {
+        console.error('Error generating presigned URL:', error);
+        throw new Error('Could not generate file URL.');
+    }
 }

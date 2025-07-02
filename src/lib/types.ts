@@ -7,7 +7,7 @@ export interface Warranty {
   category: WarrantyCategory;
   purchaseDate: Date;
   expiryDate: Date;
-  invoiceImage?: string;
-  warrantyCardImage?: string;
+  invoiceKey?: string;
+  warrantyCardKey?: string;
   notes?: string;
 }

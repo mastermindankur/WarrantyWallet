@@ -177,19 +177,19 @@ export function WarrantyFormDialog({ children, warranty, onSave }: WarrantyFormD
         ? doc(db, 'warranties', warranty.id)
         : doc(collection(db, 'warranties'));
       
-      let invoiceImageUrl = warranty?.invoiceImage;
-      let warrantyCardImageUrl = warranty?.warrantyCardImage;
+      let invoiceKey = warranty?.invoiceKey;
+      let warrantyCardKey = warranty?.warrantyCardKey;
 
       const invoiceFile = data.invoice?.[0];
       if (invoiceFile) {
         const dataUri = await fileToDataUri(invoiceFile);
-        invoiceImageUrl = await uploadFileToS3(user.uid, docRef.id, dataUri, invoiceFile.name);
+        invoiceKey = await uploadFileToS3(user.uid, docRef.id, dataUri, invoiceFile.name);
       }
       
       const warrantyCardFile = data.warrantyCard?.[0];
       if (warrantyCardFile) {
         const dataUri = await fileToDataUri(warrantyCardFile);
-        warrantyCardImageUrl = await uploadFileToS3(user.uid, docRef.id, dataUri, warrantyCardFile.name);
+        warrantyCardKey = await uploadFileToS3(user.uid, docRef.id, dataUri, warrantyCardFile.name);
       }
       
       const warrantyDataForDb = {
@@ -199,8 +199,8 @@ export function WarrantyFormDialog({ children, warranty, onSave }: WarrantyFormD
         purchaseDate: data.purchaseDate,
         expiryDate: data.expiryDate,
         notes: data.notes || '',
-        invoiceImage: invoiceImageUrl || null,
-        warrantyCardImage: warrantyCardImageUrl || null,
+        invoiceKey: invoiceKey || null,
+        warrantyCardKey: warrantyCardKey || null,
       };
       
       await setDoc(docRef, warrantyDataForDb, { merge: true });
