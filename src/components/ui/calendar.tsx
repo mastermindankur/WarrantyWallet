@@ -69,7 +69,7 @@ function CustomCaption({ displayMonth }: CaptionProps) {
   const months = Array.from({ length: 12 }, (_, i) => i);
 
   return (
-    <div className="flex items-center mb-4">
+    <div className="flex items-center justify-between mb-4">
       <div className="flex items-center gap-2">
         <Select
           value={displayMonth.getMonth().toString()}
@@ -106,7 +106,7 @@ function CustomCaption({ displayMonth }: CaptionProps) {
           </SelectContent>
         </Select>
       </div>
-      <div className="flex items-center gap-1 ml-auto">
+      <div className="flex items-center gap-1">
         <button
           type="button"
           aria-label="Go to previous month"
