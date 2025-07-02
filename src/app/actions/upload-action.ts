@@ -8,14 +8,14 @@ let s3Client: S3Client | null = null;
 
 if (
   process.env.AWS_S3_REGION &&
-  process.env.AWS_ACCESS_KEY_ID &&
-  process.env.AWS_SECRET_ACCESS_KEY
+  process.env.AWS_ACCESS_KEY_ID1 &&
+  process.env.AWS_SECRET_ACCESS_KEY1
 ) {
   s3Client = new S3Client({
     region: process.env.AWS_S3_REGION,
     credentials: {
-      accessKeyId: process.env.AWS_ACCESS_KEY_ID,
-      secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
+      accessKeyId: process.env.AWS_ACCESS_KEY_ID1,
+      secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY1,
     },
   });
 }
