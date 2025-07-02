@@ -29,8 +29,8 @@ const DetectWarrantyPeriodInputSchema = z.object({
 export type DetectWarrantyPeriodInput = z.infer<typeof DetectWarrantyPeriodInputSchema>;
 
 const DetectWarrantyPeriodOutputSchema = z.object({
-  purchaseDate: z.date().optional().describe('The detected purchase date.'),
-  expiryDate: z.date().optional().describe('The detected warranty expiry date.'),
+  purchaseDate: z.date().optional().describe('The detected purchase date, formatted as YYYY-MM-DD.'),
+  expiryDate: z.date().optional().describe('The detected warranty expiry date, formatted as YYYY-MM-DD.'),
   warrantyPeriodMonths: z
     .number()
     .optional()
@@ -61,6 +61,8 @@ const detectWarrantyPeriodPrompt = ai.definePrompt({
       Analyze the provided documents and product description to identify the purchase date, expiry date, and warranty period in months.
       If you can determine the purchase date and warranty period, you can calculate the expiry date. If you find an explicit expiry date, use that.
       Prioritize information from the warranty card if both documents are present and there's a conflict.
+
+      IMPORTANT: Dates in the output JSON must be strings in YYYY-MM-DD format.
 
       Also, provide a confidence score (0-1) indicating the reliability of your detection and a brief reasoning for your conclusions, mentioning which document you used.
       Output in JSON format.
