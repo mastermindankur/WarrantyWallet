@@ -8,7 +8,6 @@ import { z } from 'zod';
 import { addMonths, format, isValid } from 'date-fns';
 import { CalendarIcon, Loader2, AlertTriangle, Sparkles } from 'lucide-react';
 import { doc, setDoc, collection } from 'firebase/firestore';
-import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 
 import { Button } from '@/components/ui/button';
 import {
@@ -33,7 +32,7 @@ import { detectWarrantyPeriod } from '@/ai/flows/detect-warranty-period';
 import { warnShortWarranties } from '@/ai/flows/warn-short-warranties';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/auth-context';
-import { db, storage } from '@/lib/firebase';
+import { db } from '@/lib/firebase';
 
 const FormSchema = z.object({
   productName: z.string().min(2, 'Product name must be at least 2 characters.'),
@@ -107,13 +106,14 @@ export function WarrantyFormDialog({ children, warranty, onSave }: WarrantyFormD
       
       const parseDate = (dateString: string | undefined): Date | null => {
         if (!dateString) return null;
-        const flexibleDate = new Date(dateString.replace(/-/g, '/')); // More robust parsing
-        if (isValid(flexibleDate)) {
-            // Return date in local timezone but with UTC values to avoid off-by-one day errors
-            return new Date(Date.UTC(flexibleDate.getFullYear(), flexibleDate.getMonth(), flexibleDate.getDate()));
+        // Handles 'YYYY-MM-DD' and 'Month D, YYYY' etc.
+        const d = new Date(dateString.replace(/-/g, '/'));
+        if (isValid(d)) {
+          // Create a UTC date to avoid timezone-off-by-one errors when displaying
+          return new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
         }
         return null;
-      }
+      };
 
       let reasoningParts: string[] = [];
       if (warrantyResult.reasoning) {
@@ -127,7 +127,6 @@ export function WarrantyFormDialog({ children, warranty, onSave }: WarrantyFormD
         form.setValue('purchaseDate', purchaseDate, { shouldValidate: true });
         reasoningParts.push('AI detected the purchase date.');
         
-        // Calculate expiry date only if not directly provided
         if (!expiryDate && warrantyResult.warrantyPeriodMonths) {
           expiryDate = addMonths(purchaseDate, warrantyResult.warrantyPeriodMonths);
           reasoningParts.push(`AI calculated expiry from a ${warrantyResult.warrantyPeriodMonths}-month warranty.`);
@@ -139,7 +138,6 @@ export function WarrantyFormDialog({ children, warranty, onSave }: WarrantyFormD
         reasoningParts.push('AI detected the expiry date.');
       }
       
-
       const confidenceText = `(Confidence: ${Math.round(warrantyResult.confidenceScore * 100)}%)`;
       setAiReasoning(`${reasoningParts.join(' ')} ${confidenceText}`);
 
@@ -160,7 +158,7 @@ export function WarrantyFormDialog({ children, warranty, onSave }: WarrantyFormD
   };
 
   const onSubmit = async (data: FormValues) => {
-    if (!user || !storage || !db) {
+    if (!user || !db) {
       toast({
         variant: 'destructive',
         title: 'Authentication Error',
@@ -172,28 +170,21 @@ export function WarrantyFormDialog({ children, warranty, onSave }: WarrantyFormD
     setIsSaving(true);
     
     try {
-      // Determine the document reference first. Either an existing one for edits, or a new one.
       const docRef = warranty?.id
         ? doc(db, 'warranties', warranty.id)
         : doc(collection(db, 'warranties'));
-      
-      const warrantyId = docRef.id;
       
       let invoiceImageUri: string | undefined = warranty?.invoiceImage;
       let warrantyCardImageUri: string | undefined = warranty?.warrantyCardImage;
       
       const invoiceFile = data.invoice?.[0];
       if (invoiceFile) {
-        const storageRef = ref(storage, `warranties/${user.uid}/${warrantyId}/${invoiceFile.name}`);
-        const snapshot = await uploadBytes(storageRef, invoiceFile);
-        invoiceImageUri = await getDownloadURL(snapshot.ref);
+        invoiceImageUri = await fileToDataUri(invoiceFile);
       }
       
       const warrantyCardFile = data.warrantyCard?.[0];
       if (warrantyCardFile) {
-        const storageRef = ref(storage, `warranties/${user.uid}/${warrantyId}/${warrantyCardFile.name}`);
-        const snapshot = await uploadBytes(storageRef, warrantyCardFile);
-        warrantyCardImageUri = await getDownloadURL(snapshot.ref);
+        warrantyCardImageUri = await fileToDataUri(warrantyCardFile);
       }
       
       const warrantyDataForDb = {
@@ -207,7 +198,6 @@ export function WarrantyFormDialog({ children, warranty, onSave }: WarrantyFormD
         warrantyCardImage: warrantyCardImageUri || '',
       };
       
-      // Use the reference we created at the start.
       await setDoc(docRef, warrantyDataForDb);
       
       onSave();
