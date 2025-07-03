@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useEffect } from 'react';
@@ -70,7 +71,7 @@ export default function HomePage() {
               </svg>
               <div className="relative px-6 py-32 sm:py-40 lg:px-8 lg:py-56 lg:pr-0">
                 <div className="mx-auto max-w-2xl lg:mx-0 lg:max-w-xl">
-                  <h1 className="text-4xl font-bold tracking-tight sm:text-6xl sm:leading-snug bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
+                  <h1 className="text-4xl font-bold tracking-tight sm:text-6xl sm:leading-snug bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent leading-snug">
                     Never Lose a Warranty Again.
                   </h1>
                   <p className="mt-6 text-lg leading-8 text-muted-foreground">
@@ -88,7 +89,7 @@ export default function HomePage() {
           <div className="bg-gray-50 lg:absolute lg:inset-y-0 lg:right-0 lg:w-1/2">
             <Image
               className="aspect-[3/2] object-cover lg:aspect-auto lg:h-full lg:w-full"
-              src="https://placehold.co/1200x800.png"
+              src="/hero-image.png"
               alt="Digital wallet illustration"
               width={1200}
               height={800}
