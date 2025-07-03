@@ -91,7 +91,7 @@ export default function SignupPage() {
               <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-primary">
                 <ShieldCheck className="h-8 w-8 text-primary-foreground" />
               </div>
-              <CardTitle className="text-3xl font-bold">Create an Account</CardTitle>
+              <CardTitle className="text-2xl font-bold sm:text-3xl">Create an Account</CardTitle>
               <CardDescription>Get started with WarrantyWallet for free.</CardDescription>
             </CardHeader>
             <CardContent>
@@ -110,7 +110,7 @@ export default function SignupPage() {
                   <Label htmlFor="password">Password</Label>
                   <Input id="password" type="password" required value={password} onChange={(e) => setPassword(e.target.value)} />
                 </div>
-                <Button type="submit" className="w-full text-lg" disabled={isLoading}>
+                <Button type="submit" className="w-full" disabled={isLoading}>
                   {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                   Sign Up
                 </Button>

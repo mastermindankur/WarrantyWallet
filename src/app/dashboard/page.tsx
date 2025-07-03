@@ -183,7 +183,7 @@ function DashboardContent() {
 
   return (
     <div className="flex min-h-screen w-full flex-col">
-      <div className="flex items-center justify-between pb-4">
+      <div className="flex flex-col items-start gap-4 pb-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-3xl font-bold">Your Warranties</h1>
           <p className="text-muted-foreground">
@@ -191,7 +191,7 @@ function DashboardContent() {
           </p>
         </div>
         {warranties.length > 0 && (
-            <div className="flex items-center gap-2">
+            <div className="flex w-full items-center justify-end gap-2 sm:w-auto">
             <Select value={sortOption} onValueChange={(value: 'asc' | 'desc' | 'expired') => setSortOption(value)}>
               <SelectTrigger className="w-[180px]">
                 <SelectValue placeholder="Sort by..." />
