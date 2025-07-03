@@ -3,7 +3,8 @@
     "http://localhost:9002",
     "https://*.cloudworkstations.dev",
     "https://*.firebaseapp.com",
-    "https://*.web.app"
+    "https://*.web.app",
+    "https://warrantywallet.netlify.app"
   ],
   "method": [
     "GET",
