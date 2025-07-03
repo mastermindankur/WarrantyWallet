@@ -63,11 +63,12 @@ npm install
 
 This project requires credentials for Firebase, AWS S3, and Google AI.
 
-1.  Create a `.env` file in the root of the project by copying the example file:
-    ```bash
-    cp .env.example .env
-    ```
-2.  Open the `.env` file and add your credentials. You can get these from:
+1.  Create a `.env` file in the root of your project.
+2.  Add your credentials to the file. The application uses the following custom environment variables for AWS credentials:
+    - `MY_AWS_ACCESS_KEY_ID`
+    - `MY_AWS_SECRET_ACCESS_KEY`
+    
+    You will also need to provide your `AWS_S3_REGION`, and `AWS_S3_BUCKET_NAME`. You can get these values from:
     - Your Firebase project settings.
     - Your AWS IAM console for S3 access.
     - Google AI Studio or Google Cloud Console for the Gemini API key.
