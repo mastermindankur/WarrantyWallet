@@ -89,7 +89,7 @@ export default function HomePage() {
           <div className="bg-gray-50 lg:absolute lg:inset-y-0 lg:right-0 lg:w-1/2">
             <Image
               className="aspect-[3/2] object-cover lg:aspect-auto lg:h-full lg:w-full"
-              src="/hero-image.png"
+              src="/hero-image.png?v=2"
               alt="Digital wallet illustration"
               width={1200}
               height={800}
