@@ -5,27 +5,36 @@ import { S3Client, DeleteObjectCommand } from '@aws-sdk/client-s3';
 
 let s3Client: S3Client | null = null;
 
-if (
-  process.env.AWS_S3_REGION &&
-  process.env.MY_AWS_ACCESS_KEY_ID &&
-  process.env.MY_AWS_SECRET_ACCESS_KEY
-) {
+const requiredAwsVars = [
+  'AWS_S3_REGION',
+  'MY_AWS_ACCESS_KEY_ID',
+  'MY_AWS_SECRET_ACCESS_KEY',
+  'AWS_S3_BUCKET_NAME',
+];
+const missingAwsVars = requiredAwsVars.filter(v => !process.env[v]);
+
+if (missingAwsVars.length > 0) {
+  console.error(`[S3_CONFIG_ERROR] S3 client not initialized for warranty actions. Missing environment variables on the server: ${missingAwsVars.join(', ')}`);
+} else {
   s3Client = new S3Client({
     region: process.env.AWS_S3_REGION,
     credentials: {
-      accessKeyId: process.env.MY_AWS_ACCESS_KEY_ID,
-      secretAccessKey: process.env.MY_AWS_SECRET_ACCESS_KEY,
+      accessKeyId: process.env.MY_AWS_ACCESS_KEY_ID!,
+      secretAccessKey: process.env.MY_AWS_SECRET_ACCESS_KEY!,
     },
   });
 }
 
+
 async function deleteFileFromS3(key: string) {
-    if (!s3Client || !process.env.AWS_S3_BUCKET_NAME) {
-        throw new Error('AWS S3 environment variables are not configured for deletion.');
+    if (!s3Client) {
+        const errorMsg = 'AWS S3 client is not configured on the server. Please check server logs for missing environment variables.';
+        console.error(errorMsg);
+        throw new Error(errorMsg);
     }
 
     const params = {
-        Bucket: process.env.AWS_S3_BUCKET_NAME,
+        Bucket: process.env.AWS_S3_BUCKET_NAME!,
         Key: key,
     };
 
