@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
 import { Button } from '@/components/ui/button';
-import { ShieldCheck, Sparkles, CloudUpload, BellRing, ScanLine, ArrowRight, Laptop, Smartphone } from 'lucide-react';
+import { ShieldCheck, Sparkles, CloudUpload, BellRing, ScanLine, ArrowRight, Laptop, Smartphone, Speaker, GlassWater } from 'lucide-react';
 import PublicHeader from '@/components/public-header';
 import PublicFooter from '@/components/public-footer';
 import { useAuth } from '@/contexts/auth-context';
@@ -161,24 +161,24 @@ export default function HomePage() {
                     <div className="space-y-3">
                         <div className="flex items-center justify-between rounded-lg bg-background p-4 shadow-sm">
                             <div className="space-y-1">
-                                <p className="font-medium">ProBook Laptop</p>
+                                <p className="font-medium">Macbook Air</p>
                                 <p className="text-sm text-green-500">Expires in 1 year</p>
                             </div>
                             <div className="rounded-full bg-primary/10 p-2 text-primary"><Laptop className="h-5 w-5" /></div>
                         </div>
                         <div className="flex items-center justify-between rounded-lg bg-background p-4 shadow-sm">
                             <div className="space-y-1">
-                                <p className="font-medium">Smart Fridge</p>
+                                <p className="font-medium">Amazon Alexa</p>
                                 <p className="text-sm text-amber-500">Expires in 2 months</p>
                             </div>
-                            <div className="rounded-full bg-primary/10 p-2 text-primary"><Smartphone className="h-5 w-5" /></div>
+                            <div className="rounded-full bg-primary/10 p-2 text-primary"><Speaker className="h-5 w-5" /></div>
                         </div>
                         <div className="flex items-center justify-between rounded-lg bg-background p-4 opacity-60 shadow-sm">
                             <div className="space-y-1">
-                                <p className="font-medium">Wireless Headphones</p>
+                                <p className="font-medium">Urban Company Water Purifier</p>
                                 <p className="text-sm text-red-500">Expired 3 months ago</p>
                             </div>
-                            <div className="rounded-full bg-primary/10 p-2 text-primary"><Laptop className="h-5 w-5" /></div>
+                            <div className="rounded-full bg-primary/10 p-2 text-primary"><GlassWater className="h-5 w-5" /></div>
                         </div>
                     </div>
                 </div>
