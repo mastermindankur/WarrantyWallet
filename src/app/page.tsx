@@ -70,7 +70,7 @@ export default function HomePage() {
               </svg>
               <div className="relative px-6 py-32 sm:py-40 lg:px-8 lg:py-56 lg:pr-0">
                 <div className="mx-auto max-w-2xl lg:mx-0 lg:max-w-xl">
-                  <h1 className="text-4xl font-bold tracking-tight sm:text-6xl bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
+                  <h1 className="text-4xl font-bold tracking-tight sm:text-6xl sm:leading-snug bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
                     Never Lose a Warranty Again.
                   </h1>
                   <p className="mt-6 text-lg leading-8 text-muted-foreground">
