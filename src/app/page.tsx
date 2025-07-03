@@ -200,7 +200,10 @@ export default function HomePage() {
                     </p>
                     <div className="mt-10 flex items-center justify-center gap-x-6">
                         <Button asChild size="lg" variant="secondary">
-                            <Link href="/signup">Create Your Free Account</Link>
+                            <Link href="/signup">Sign Up</Link>
+                        </Button>
+                        <Button asChild size="lg" variant="link" className="text-primary-foreground hover:text-primary-foreground/90">
+                            <Link href="/login">Log In</Link>
                         </Button>
                     </div>
                 </div>
