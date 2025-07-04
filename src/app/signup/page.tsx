@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { createUserWithEmailAndPassword, signInWithPopup, GoogleAuthProvider } from 'firebase/auth';
+import { createUserWithEmailAndPassword } from 'firebase/auth';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -14,13 +14,6 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import PublicHeader from '@/components/public-header';
 import PublicFooter from '@/components/public-footer';
 import { useAuth } from '@/contexts/auth-context';
-
-const GoogleIcon = (props: React.SVGProps<SVGSVGElement>) => (
-    <svg role="img" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" {...props}>
-        <path d="M12.48 10.92v3.28h7.84c-.24 1.84-.85 3.18-1.73 4.1-1.02 1.08-2.58 2.03-4.56 2.03-3.86 0-7-3.14-7-7s3.14-7 7-7c2.18 0 3.66.86 4.69 1.83l2.7-2.7C18.28 2.37 15.65 1 12.48 1 5.83 1 1 5.83 1 12.48S5.83 23.96 12.48 23.96c3.99 0 6.83-1.37 8.99-3.55 2.27-2.3 2.89-5.33 2.89-8.1 0-1.15-.1-1.64-.26-2.39H12.48z" fill="currentColor" />
-    </svg>
-);
-
 
 export default function SignupPage() {
   const router = useRouter();
@@ -80,30 +73,6 @@ export default function SignupPage() {
     }
   };
 
-  const handleGoogleSignIn = async () => {
-    setIsLoading(true);
-    setError(null);
-    if (!auth) {
-      setError("Firebase is not configured. Please add your Firebase credentials to the .env file.");
-      setIsLoading(false);
-      return;
-    }
-    const provider = new GoogleAuthProvider();
-    try {
-      await signInWithPopup(auth, provider);
-      router.push('/dashboard');
-    } catch (error: any) {
-        console.error("Google sign-in error", error);
-        let errorMessage = 'Failed to sign up with Google. Please try again.';
-        if(error.code === 'auth/popup-closed-by-user') {
-            errorMessage = 'Sign-up process was cancelled.';
-        }
-        setError(errorMessage);
-    } finally {
-        setIsLoading(false);
-    }
-  };
-
   if (authLoading || user) {
     return (
         <div className="flex min-h-screen w-full items-center justify-center bg-background">
@@ -123,7 +92,7 @@ export default function SignupPage() {
                 <ShieldCheck className="h-8 w-8 text-primary-foreground" />
               </div>
               <CardTitle className="text-2xl font-bold sm:text-3xl">Create an Account</CardTitle>
-              <CardDescription>Get started with WarrantyWallet for free.</CardDescription>
+              <CardDescription>Get started by creating an account with your email.</CardDescription>
             </CardHeader>
             <CardContent>
               <form onSubmit={handleSignup} className="space-y-4">
@@ -147,26 +116,10 @@ export default function SignupPage() {
                 </Button>
               </form>
 
-              <div className="relative my-4">
-                <div className="absolute inset-0 flex items-center">
-                    <span className="w-full border-t" />
-                </div>
-                <div className="relative flex justify-center text-xs uppercase">
-                    <span className="bg-card px-2 text-muted-foreground">
-                    Or continue with
-                    </span>
-                </div>
-              </div>
-              
-              <Button variant="outline" className="w-full" onClick={handleGoogleSignIn} disabled={isLoading}>
-                {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <GoogleIcon className="mr-2 h-4 w-4" />}
-                Sign Up with Google
-              </Button>
-
-              <div className="mt-4 text-center text-sm text-muted-foreground">
-                Already have an account?{' '}
+              <div className="mt-6 text-center text-sm text-muted-foreground">
+                Already have an account? Or want to use Google?{' '}
                 <Link href="/login" className="font-medium text-primary hover:underline">
-                  Log in
+                  Log In
                 </Link>
               </div>
             </CardContent>
