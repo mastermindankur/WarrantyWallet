@@ -202,7 +202,7 @@ export default function HomePage() {
                         <Button asChild size="lg" variant="secondary">
                             <Link href="/signup">Sign Up</Link>
                         </Button>
-                        <Button asChild size="lg" variant="link" className="text-primary-foreground hover:text-primary-foreground/90">
+                        <Button asChild size="lg" variant="link" className="hidden sm:inline-block text-primary-foreground hover:text-primary-foreground/90">
                             <Link href="/login">Log In</Link>
                         </Button>
                     </div>

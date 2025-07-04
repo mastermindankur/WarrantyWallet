@@ -8,6 +8,7 @@ import { cn } from '@/lib/utils';
 
 export default function PublicHeader() {
   const pathname = usePathname();
+  const isHomePage = pathname === '/';
 
   return (
     <header className="absolute inset-x-0 top-0 z-50">
@@ -19,10 +20,16 @@ export default function PublicHeader() {
           </Link>
         </div>
         <div className="flex flex-1 justify-end items-center gap-x-6">
-          <Button asChild className={cn({ 'hidden': pathname === '/login' })}>
+          <Button
+            asChild
+            className={cn(
+              { hidden: pathname === '/login' },
+              { 'hidden sm:flex': isHomePage }
+            )}
+          >
             <Link href="/login">Log in</Link>
           </Button>
-          <Button asChild className={cn({ 'hidden': pathname === '/signup' })}>
+          <Button asChild className={cn({ hidden: pathname === '/signup' })}>
             <Link href="/signup">Sign up</Link>
           </Button>
         </div>
