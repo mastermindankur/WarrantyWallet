@@ -19,9 +19,9 @@ export default function PublicHeader() {
           </Link>
         </div>
         <div className="flex flex-1 justify-end items-center gap-x-6">
-          <Link href="/login" className={cn("text-sm font-semibold leading-6 text-foreground hover:text-primary", { 'hidden': pathname === '/login' })}>
-            Log in
-          </Link>
+          <Button asChild className={cn({ 'hidden': pathname === '/login' })}>
+            <Link href="/login">Log in</Link>
+          </Button>
           <Button asChild className={cn({ 'hidden': pathname === '/signup' })}>
             <Link href="/signup">Sign up</Link>
           </Button>
