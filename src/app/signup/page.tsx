@@ -84,7 +84,7 @@ export default function SignupPage() {
   return (
     <div className="flex min-h-screen flex-col bg-background">
       <PublicHeader />
-      <main className="flex flex-grow flex-col items-center justify-center p-4">
+      <main className="flex flex-grow flex-col items-center justify-center p-4 pt-32">
         <div className="w-full max-w-md">
           <Card className="shadow-2xl">
             <CardHeader className="text-center">
