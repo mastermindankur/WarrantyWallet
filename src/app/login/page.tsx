@@ -130,11 +130,16 @@ export default function LoginPage() {
       return;
     }
 
+    const actionCodeSettings = {
+        url: `${window.location.origin}/login`,
+        handleCodeInApp: false,
+    };
+
     try {
-      await sendPasswordResetEmail(auth, resetEmail);
+      await sendPasswordResetEmail(auth, resetEmail, actionCodeSettings);
       toast({
         title: "Check your inbox",
-        description: `A password reset link has been sent to ${resetEmail}.`,
+        description: `A password reset link has been sent to ${resetEmail}. You will be redirected here after reset.`,
       });
       setIsResetDialogOpen(false);
       setResetEmail('');
