@@ -1,3 +1,4 @@
+
 import {initializeApp, getApps, getApp} from 'firebase/app';
 import {getAuth} from 'firebase/auth';
 import { getFirestore } from 'firebase/firestore';
@@ -15,12 +16,19 @@ let app;
 let auth;
 let db;
 
-if (firebaseConfig.apiKey) {
-  app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
-  auth = getAuth(app);
-  db = getFirestore(app);
+if (firebaseConfig.apiKey && firebaseConfig.projectId) {
+  try {
+    app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
+    auth = getAuth(app);
+    db = getFirestore(app);
+  } catch (e) {
+    console.error("Failed to initialize Firebase. Please check your .env configuration.", e);
+    app = null;
+    auth = null;
+    db = null;
+  }
 } else {
-    console.warn("Firebase configuration is missing. Authentication will be disabled. Please add your Firebase credentials to a .env file.");
+    console.warn("Firebase configuration is missing. Features depending on Firebase will be disabled. Please add your credentials to your environment variables.");
     app = null;
     auth = null;
     db = null;
