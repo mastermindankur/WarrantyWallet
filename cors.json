@@ -4,7 +4,8 @@
     "https://*.cloudworkstations.dev",
     "https://*.firebaseapp.com",
     "https://*.web.app",
-    "https://warrantywallet.netlify.app"
+    "https://warrantywallet.netlify.app",
+    "https://warrantywallet.online"
   ],
   "method": [
     "GET",
