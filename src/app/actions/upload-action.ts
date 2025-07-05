@@ -5,27 +5,32 @@ import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { randomUUID } from 'crypto';
 
 let s3Client: S3Client | null = null;
+let s3InitializationError: string | null = null;
 
-const requiredAwsVars = [
-  'AWS_S3_REGION',
-  'MY_AWS_ACCESS_KEY_ID',
-  'MY_AWS_SECRET_ACCESS_KEY',
-  'AWS_S3_BUCKET_NAME',
-];
-const missingAwsVars = requiredAwsVars.filter(v => !process.env[v]);
+try {
+  const requiredAwsVars = [
+    'AWS_S3_REGION',
+    'MY_AWS_ACCESS_KEY_ID',
+    'MY_AWS_SECRET_ACCESS_KEY',
+    'AWS_S3_BUCKET_NAME',
+  ];
+  const missingAwsVars = requiredAwsVars.filter(v => !process.env[v]);
 
-if (missingAwsVars.length > 0) {
-  console.error(`[S3_CONFIG_ERROR] S3 client not initialized. Missing environment variables on the server: ${missingAwsVars.join(', ')}`);
-} else {
+  if (missingAwsVars.length > 0) {
+    throw new Error(`Missing S3 environment variables on the server: ${missingAwsVars.join(', ')}`);
+  }
+
   s3Client = new S3Client({
-    region: process.env.AWS_S3_REGION,
+    region: process.env.AWS_S3_REGION!,
     credentials: {
       accessKeyId: process.env.MY_AWS_ACCESS_KEY_ID!,
       secretAccessKey: process.env.MY_AWS_SECRET_ACCESS_KEY!,
     },
   });
+} catch (error: any) {
+  s3InitializationError = error.message || 'An unknown error occurred during S3 client initialization.';
+  console.error(`[S3_CONFIG_ERROR] S3 client failed to initialize. ${s3InitializationError}`);
 }
-
 
 /**
  * Uploads a file to a private S3 bucket.
@@ -37,8 +42,8 @@ export async function uploadFileToS3(
   fileDataUri: string,
   fileName: string
 ) {
-  if (!s3Client) {
-    const errorMsg = 'AWS S3 client is not configured on the server. Please check server logs for missing environment variables.';
+  if (s3InitializationError || !s3Client) {
+    const errorMsg = `AWS S3 client is not configured on the server. Reason: ${s3InitializationError || 'Unknown error.'}`;
     console.error(errorMsg);
     throw new Error(errorMsg);
   }
@@ -75,8 +80,8 @@ export async function uploadFileToS3(
  * @returns A presigned URL valid for a limited time.
  */
 export async function getPresignedUrl(key: string) {
-    if (!s3Client) {
-        const errorMsg = 'AWS S3 client is not configured on the server. Please check server logs for missing environment variables.';
+    if (s3InitializationError || !s3Client) {
+        const errorMsg = `AWS S3 client is not configured on the server. Reason: ${s3InitializationError || 'Unknown error.'}`;
         console.error(errorMsg);
         throw new Error(errorMsg);
     }

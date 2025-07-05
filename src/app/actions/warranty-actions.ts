@@ -4,31 +4,37 @@ import { S3Client, DeleteObjectCommand } from '@aws-sdk/client-s3';
 // Firestore-related imports are no longer needed here.
 
 let s3Client: S3Client | null = null;
+let s3InitializationError: string | null = null;
 
-const requiredAwsVars = [
-  'AWS_S3_REGION',
-  'MY_AWS_ACCESS_KEY_ID',
-  'MY_AWS_SECRET_ACCESS_KEY',
-  'AWS_S3_BUCKET_NAME',
-];
-const missingAwsVars = requiredAwsVars.filter(v => !process.env[v]);
+try {
+  const requiredAwsVars = [
+    'AWS_S3_REGION',
+    'MY_AWS_ACCESS_KEY_ID',
+    'MY_AWS_SECRET_ACCESS_KEY',
+    'AWS_S3_BUCKET_NAME',
+  ];
+  const missingAwsVars = requiredAwsVars.filter(v => !process.env[v]);
 
-if (missingAwsVars.length > 0) {
-  console.error(`[S3_CONFIG_ERROR] S3 client not initialized for warranty actions. Missing environment variables on the server: ${missingAwsVars.join(', ')}`);
-} else {
+  if (missingAwsVars.length > 0) {
+    throw new Error(`Missing S3 environment variables for warranty actions: ${missingAwsVars.join(', ')}`);
+  }
+
   s3Client = new S3Client({
-    region: process.env.AWS_S3_REGION,
+    region: process.env.AWS_S3_REGION!,
     credentials: {
       accessKeyId: process.env.MY_AWS_ACCESS_KEY_ID!,
       secretAccessKey: process.env.MY_AWS_SECRET_ACCESS_KEY!,
     },
   });
+} catch (error: any) {
+    s3InitializationError = error.message || 'An unknown error occurred during S3 client initialization for warranty actions.';
+    console.error(`[S3_CONFIG_ERROR] S3 client failed to initialize for warranty actions. ${s3InitializationError}`);
 }
 
 
 async function deleteFileFromS3(key: string) {
-    if (!s3Client) {
-        const errorMsg = 'AWS S3 client is not configured on the server. Please check server logs for missing environment variables.';
+    if (s3InitializationError || !s3Client) {
+        const errorMsg = `AWS S3 client is not configured on the server. Reason: ${s3InitializationError || 'Unknown error.'}`;
         console.error(errorMsg);
         throw new Error(errorMsg);
     }
@@ -54,6 +60,10 @@ interface DeleteWarrantyFilesParams {
 
 export async function deleteWarrantyFiles({ invoiceKey, warrantyCardKey }: DeleteWarrantyFilesParams): Promise<{ success: boolean; message: string }> {
     try {
+        if (s3InitializationError) {
+            throw new Error(s3InitializationError);
+        }
+
         if (invoiceKey) {
             await deleteFileFromS3(invoiceKey);
         }
