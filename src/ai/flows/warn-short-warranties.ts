@@ -43,6 +43,9 @@ export type WarnShortWarrantiesOutput = z.infer<typeof WarnShortWarrantiesOutput
 export async function warnShortWarranties(
   input: WarnShortWarrantiesInput
 ): Promise<WarnShortWarrantiesOutput> {
+  if (!process.env.GOOGLE_API_KEY) {
+    throw new Error('The Google AI API key is not configured on the server. Please set the GOOGLE_API_KEY environment variable.');
+  }
   return warnShortWarrantiesFlow(input);
 }
 

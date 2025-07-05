@@ -50,6 +50,9 @@ const DetectWarrantyPeriodOutputSchema = z.object({
 export type DetectWarrantyPeriodOutput = z.infer<typeof DetectWarrantyPeriodOutputSchema>;
 
 export async function detectWarrantyPeriod(input: DetectWarrantyPeriodInput): Promise<DetectWarrantyPeriodOutput> {
+  if (!process.env.GOOGLE_API_KEY) {
+    throw new Error('The Google AI API key is not configured on the server. Please set the GOOGLE_API_KEY environment variable.');
+  }
   return detectWarrantyPeriodFlow(input);
 }
 
