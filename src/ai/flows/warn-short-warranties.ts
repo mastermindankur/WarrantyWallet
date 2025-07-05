@@ -74,6 +74,12 @@ const warnShortWarrantiesFlow = ai.defineFlow(
   },
   async input => {
     const {output} = await prompt(input);
-    return output!;
+    if (!output) {
+      return {
+        isShortWarranty: false,
+        warningMessage: 'Could not analyze document to check for a short warranty.',
+      };
+    }
+    return output;
   }
 );

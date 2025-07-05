@@ -148,12 +148,12 @@ export function WarrantyFormDialog({ children, warranty, onSave }: WarrantyFormD
         setAiWarning(shortWarrantyResult.warningMessage);
       }
 
-    } catch (error) {
+    } catch (error: any) {
       console.error('AI processing failed:', error);
       toast({
         variant: 'destructive',
         title: 'AI Analysis Failed',
-        description: 'Could not analyze the document. Please set the dates manually.',
+        description: error.message || 'Could not analyze the document. Please try again.',
       });
     } finally {
       setIsAiRunning(false);

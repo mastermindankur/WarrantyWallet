@@ -91,7 +91,11 @@ const detectWarrantyPeriodFlow = ai.defineFlow(
     const {output} = await detectWarrantyPeriodPrompt(input);
 
     if (!output) {
-        throw new Error("AI analysis did not return a result.");
+      return {
+        confidenceScore: 0,
+        reasoning:
+          'AI analysis failed to produce a valid result. The document may be unreadable or not a valid invoice/warranty card.',
+      };
     }
     
     return output;
