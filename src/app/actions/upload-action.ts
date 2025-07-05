@@ -1,13 +1,20 @@
 'use server';
 
-import { S3Client, PutObjectCommand, GetObjectCommand } from '@aws-sdk/client-s3';
-import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
-import { randomUUID } from 'crypto';
+import {
+  S3Client,
+  PutObjectCommand,
+  GetObjectCommand,
+} from '@aws-sdk/client-s3';
+import {getSignedUrl} from '@aws-sdk/s3-request-presigner';
+import {randomUUID} from 'crypto';
 
 let s3Client: S3Client | null = null;
-let s3InitializationError: string | null = null;
 
-try {
+function getS3Client(): S3Client {
+  if (s3Client) {
+    return s3Client;
+  }
+
   const requiredAwsVars = [
     'AWS_S3_REGION',
     'MY_AWS_ACCESS_KEY_ID',
@@ -17,19 +24,27 @@ try {
   const missingAwsVars = requiredAwsVars.filter(v => !process.env[v]);
 
   if (missingAwsVars.length > 0) {
-    throw new Error(`Missing S3 environment variables on the server: ${missingAwsVars.join(', ')}`);
+    const errorMsg = `Missing S3 environment variables on the server: ${missingAwsVars.join(
+      ', '
+    )}. Please set them in your hosting environment.`;
+    console.error(`[S3_CONFIG_ERROR] ${errorMsg}`);
+    throw new Error(errorMsg);
   }
 
-  s3Client = new S3Client({
-    region: process.env.AWS_S3_REGION!,
-    credentials: {
-      accessKeyId: process.env.MY_AWS_ACCESS_KEY_ID!,
-      secretAccessKey: process.env.MY_AWS_SECRET_ACCESS_KEY!,
-    },
-  });
-} catch (error: any) {
-  s3InitializationError = error.message || 'An unknown error occurred during S3 client initialization.';
-  console.error(`[S3_CONFIG_ERROR] S3 client failed to initialize. ${s3InitializationError}`);
+  try {
+    s3Client = new S3Client({
+      region: process.env.AWS_S3_REGION!,
+      credentials: {
+        accessKeyId: process.env.MY_AWS_ACCESS_KEY_ID!,
+        secretAccessKey: process.env.MY_AWS_SECRET_ACCESS_KEY!,
+      },
+    });
+    return s3Client;
+  } catch (error: any) {
+    const errorMsg = `Failed to initialize S3 client: ${error.message}`;
+    console.error(`[S3_CONFIG_ERROR] ${errorMsg}`);
+    throw new Error(errorMsg);
+  }
 }
 
 /**
@@ -42,11 +57,7 @@ export async function uploadFileToS3(
   fileDataUri: string,
   fileName: string
 ) {
-  if (s3InitializationError || !s3Client) {
-    const errorMsg = `AWS S3 client is not configured on the server. Reason: ${s3InitializationError || 'Unknown error.'}`;
-    console.error(errorMsg);
-    throw new Error(errorMsg);
-  }
+  const client = getS3Client();
 
   // Convert data URI to buffer
   const fileBuffer = Buffer.from(fileDataUri.split(',')[1], 'base64');
@@ -63,13 +74,14 @@ export async function uploadFileToS3(
   };
 
   try {
-    await s3Client.send(new PutObjectCommand(params));
+    await client.send(new PutObjectCommand(params));
     return s3Key; // Return the key, not a public URL
   } catch (error: any) {
     console.error('Error uploading to S3:', error);
-    const message = error.name === 'AccessDenied' 
-      ? 'Access Denied. Please check your S3 bucket permissions and IAM policy.' 
-      : `An AWS error occurred: ${error.name || 'Unknown'}.`;
+    const message =
+      error.name === 'AccessDenied'
+        ? 'Access Denied. Please check your S3 bucket permissions and IAM policy.'
+        : `An AWS error occurred: ${error.name || 'Unknown'}.`;
     throw new Error(message);
   }
 }
@@ -80,23 +92,19 @@ export async function uploadFileToS3(
  * @returns A presigned URL valid for a limited time.
  */
 export async function getPresignedUrl(key: string) {
-    if (s3InitializationError || !s3Client) {
-        const errorMsg = `AWS S3 client is not configured on the server. Reason: ${s3InitializationError || 'Unknown error.'}`;
-        console.error(errorMsg);
-        throw new Error(errorMsg);
-    }
+  const client = getS3Client();
 
-    const command = new GetObjectCommand({
-        Bucket: process.env.AWS_S3_BUCKET_NAME!,
-        Key: key,
-    });
+  const command = new GetObjectCommand({
+    Bucket: process.env.AWS_S3_BUCKET_NAME!,
+    Key: key,
+  });
 
-    try {
-        // The URL will be valid for 15 minutes.
-        const url = await getSignedUrl(s3Client, command, { expiresIn: 900 });
-        return url;
-    } catch (error) {
-        console.error('Error generating presigned URL:', error);
-        throw new Error('Could not generate file URL.');
-    }
+  try {
+    // The URL will be valid for 15 minutes.
+    const url = await getSignedUrl(client, command, {expiresIn: 900});
+    return url;
+  } catch (error) {
+    console.error('Error generating presigned URL:', error);
+    throw new Error('Could not generate file URL.');
+  }
 }
