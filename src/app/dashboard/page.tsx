@@ -1,10 +1,10 @@
+
 'use client';
 
 import { useEffect, useState, Suspense } from 'react';
 import { collection, getDocs, query, Timestamp, where } from 'firebase/firestore';
-import Link from 'next/link';
-import { useSearchParams } from 'next/navigation';
-import { Frown, PlusCircle, SortAsc, SortDesc, AlertTriangle } from 'lucide-react';
+import { useSearchParams, useRouter } from 'next/navigation';
+import { Frown, PlusCircle, SortAsc, SortDesc, AlertTriangle, Search } from 'lucide-react';
 import { isPast } from 'date-fns';
 
 import { useAuth } from '@/contexts/auth-context';
@@ -16,14 +16,17 @@ import { Skeleton } from '@/components/ui/skeleton';
 import WarrantyCard from '@/components/warranty-card';
 import { WarrantyFormDialog } from '@/components/warranty-form-dialog';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Input } from '@/components/ui/input';
 
 function DashboardContent() {
   const [warranties, setWarranties] = useState<Warranty[]>([]);
   const [sortOption, setSortOption] = useState<'asc' | 'desc' | 'expired'>('asc');
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
   const { user } = useAuth();
   const searchParams = useSearchParams();
+  const router = useRouter();
   const selectedCategory = searchParams.get('category');
 
   const fetchWarranties = async () => {
@@ -71,6 +74,12 @@ function DashboardContent() {
 
   const filteredAndSortedWarranties = [...warranties]
     .filter(warranty => {
+      const searchLower = searchQuery.toLowerCase();
+      const nameMatch = warranty.productName.toLowerCase().includes(searchLower);
+      const notesMatch = warranty.notes?.toLowerCase().includes(searchLower) || false;
+      const searchMatch = searchQuery ? nameMatch || notesMatch : true;
+      if (!searchMatch) return false;
+
       const categoryMatch = !selectedCategory || warranty.category === selectedCategory;
       if (!categoryMatch) return false;
 
@@ -85,8 +94,6 @@ function DashboardContent() {
       if (sortOption === 'asc') {
         return dateA - dateB;
       }
-      // For 'desc' and 'expired', sort descending.
-      // For expired items, this means most recently expired first.
       return dateB - dateA;
     });
 
@@ -108,6 +115,9 @@ function DashboardContent() {
   };
 
   const getEmptyStateMessage = () => {
+    if (searchQuery) {
+        return `No warranties found matching your search.`;
+    }
     if (sortOption === 'expired') {
       if (selectedCategory) {
         return `No expired warranties found in the "${selectedCategory}" category.`;
@@ -118,6 +128,12 @@ function DashboardContent() {
       return `No warranties found in the "${selectedCategory}" category.`;
     }
     return 'No warranties match the current filters.';
+  };
+
+  const clearFilters = () => {
+    setSearchQuery('');
+    setSortOption('asc');
+    router.push('/dashboard');
   };
 
   const renderContent = () => {
@@ -165,9 +181,9 @@ function DashboardContent() {
                 </div>
                 <h2 className="text-2xl font-semibold tracking-tight">No Warranties Found</h2>
                 <p className="text-muted-foreground">{getEmptyStateMessage()}</p>
-                <Link href="/dashboard">
-                    <Button variant="outline" className="mt-4">View All Warranties</Button>
-                </Link>
+                <Button variant="outline" className="mt-4" onClick={clearFilters}>
+                  Clear Filters
+                </Button>
             </div>
         );
     }
@@ -191,34 +207,44 @@ function DashboardContent() {
           </p>
         </div>
         {warranties.length > 0 && (
-            <div className="flex w-full items-center justify-end gap-2 sm:w-auto">
-            <Select value={sortOption} onValueChange={(value: 'asc' | 'desc' | 'expired') => setSortOption(value)}>
-              <SelectTrigger className="w-[180px]">
-                <SelectValue placeholder="Sort by..." />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="asc">
-                  <div className="flex items-center gap-2">
-                    <SortAsc className="h-4 w-4" /> Expires Soonest
-                  </div>
-                </SelectItem>
-                <SelectItem value="desc">
-                  <div className="flex items-center gap-2">
-                    <SortDesc className="h-4 w-4" /> Expires Latest
-                  </div>
-                </SelectItem>
-                <SelectItem value="expired">
-                  <div className="flex items-center gap-2">
-                    <AlertTriangle className="h-4 w-4" /> Expired
-                  </div>
-                </SelectItem>
-              </SelectContent>
-            </Select>
-            <WarrantyFormDialog onSave={handleWarrantyUpdate}>
-              <Button>
-                <PlusCircle className="mr-2 h-4 w-4" /> Add Warranty
-              </Button>
-            </WarrantyFormDialog>
+            <div className="flex w-full flex-wrap items-center justify-end gap-2 sm:w-auto">
+              <div className="relative flex-1 sm:max-w-xs">
+                  <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    type="search"
+                    placeholder="Search warranties..."
+                    className="w-full rounded-lg bg-background pl-8"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                  />
+              </div>
+              <Select value={sortOption} onValueChange={(value: 'asc' | 'desc' | 'expired') => setSortOption(value)}>
+                <SelectTrigger className="w-full sm:w-[180px]">
+                  <SelectValue placeholder="Sort by..." />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="asc">
+                    <div className="flex items-center gap-2">
+                      <SortAsc className="h-4 w-4" /> Expires Soonest
+                    </div>
+                  </SelectItem>
+                  <SelectItem value="desc">
+                    <div className="flex items-center gap-2">
+                      <SortDesc className="h-4 w-4" /> Expires Latest
+                    </div>
+                  </SelectItem>
+                  <SelectItem value="expired">
+                    <div className="flex items-center gap-2">
+                      <AlertTriangle className="h-4 w-4" /> Expired
+                    </div>
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+              <WarrantyFormDialog onSave={handleWarrantyUpdate}>
+                <Button className="w-full sm:w-auto">
+                  <PlusCircle className="mr-2 h-4 w-4" /> Add Warranty
+                </Button>
+              </WarrantyFormDialog>
           </div>
         )}
       </div>
