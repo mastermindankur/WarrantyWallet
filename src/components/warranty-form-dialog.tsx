@@ -354,7 +354,7 @@ export function WarrantyFormDialog({ children, warranty, onSave }: WarrantyFormD
                     render={({ field }) => (
                       <FormItem className="flex flex-col">
                         <FormLabel>Purchase Date</FormLabel>
-                        <Popover>
+                        <Popover modal={true}>
                           <PopoverTrigger asChild>
                             <FormControl>
                               <Button
@@ -386,7 +386,7 @@ export function WarrantyFormDialog({ children, warranty, onSave }: WarrantyFormD
                     render={({ field }) => (
                       <FormItem className="flex flex-col">
                         <FormLabel>Expiry Date</FormLabel>
-                        <Popover>
+                        <Popover modal={true}>
                           <PopoverTrigger asChild>
                             <FormControl>
                               <Button
