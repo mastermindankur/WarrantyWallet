@@ -16,25 +16,25 @@ interface SendReminderEmailParams {
 }
 
 function formatRemainingTimeForEmail(expiryDate: Date): string {
-    const now = new Date();
-    const hasExpired = isPast(expiryDate);
+  const now = new Date();
+  const hasExpired = isPast(expiryDate);
 
-    const duration = hasExpired
-      ? intervalToDuration({ start: expiryDate, end: now })
-      : intervalToDuration({ start: now, end: expiryDate });
+  const duration = hasExpired
+    ? intervalToDuration({ start: expiryDate, end: now })
+    : intervalToDuration({ start: now, end: expiryDate });
+
+  const parts = [];
+  if (duration.years && duration.years > 0) parts.push(`${duration.years} year${duration.years > 1 ? 's' : ''}`);
+  if (duration.months && duration.months > 0) parts.push(`${duration.months} month${duration.months > 1 ? 's' : ''}`);
+  if (duration.days && duration.days > 0) parts.push(`${duration.days} day${duration.days > 1 ? 's' : ''}`);
+
+  if (parts.length === 0) {
+    return hasExpired ? 'Expired today' : 'Expires today';
+  }
+
+  const formattedDuration = parts.join(', ');
   
-    const parts = [];
-    if (duration.years && duration.years > 0) parts.push(`${duration.years} year${duration.years > 1 ? 's' : ''}`);
-    if (duration.months && duration.months > 0) parts.push(`${duration.months} month${duration.months > 1 ? 's' : ''}`);
-    if (duration.days && duration.days > 0) parts.push(`${duration.days} day${duration.days > 1 ? 's' : ''}`);
-  
-    if (parts.length === 0) {
-      return hasExpired ? 'Expired today' : 'Expires today';
-    }
-  
-    const formattedDuration = parts.join(', ');
-  
-    return hasExpired ? `Expired ${formattedDuration} ago` : `Expires in ${formattedDuration}`;
+  return hasExpired ? `Expired ${formattedDuration} ago` : `Expires in ${formattedDuration}`;
 }
 
 export async function sendReminderEmail({ userEmail, expiringWarranties, expiredWarranties }: SendReminderEmailParams) {
@@ -62,8 +62,13 @@ export async function sendReminderEmail({ userEmail, expiringWarranties, expired
             <div class="warranty-list">
                 ${warranties.map(w => `
                     <div class="warranty-item">
-                        <strong class="product-name">${w.productName}</strong>
-                        <span class="expiry-date">${formatRemainingTimeForEmail(w.expiryDate)}</span>
+                        <div class="product-info">
+                            <strong class="product-name">${w.productName}</strong>
+                            <span class="expiry-detail">${format(w.expiryDate, 'MMM d, yyyy')}</span>
+                        </div>
+                        <div class="expiry-status">
+                            ${formatRemainingTimeForEmail(w.expiryDate)}
+                        </div>
                     </div>
                 `).join('')}
             </div>
@@ -131,13 +136,25 @@ export async function sendReminderEmail({ userEmail, expiringWarranties, expired
         .warranty-item:last-child {
             border-bottom: none;
         }
+        .product-info {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+        }
         .product-name {
             font-weight: 600;
             color: #333;
-            padding-right: 16px;
+            font-size: 16px;
         }
-        .expiry-date {
+        .expiry-detail {
+            font-size: 14px;
+            color: #7f7f7f;
+        }
+        .expiry-status {
             white-space: nowrap;
+            text-align: right;
+            font-size: 14px;
+            font-weight: 500;
         }
         .button-container {
             text-align: center;
