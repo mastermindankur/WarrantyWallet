@@ -2,8 +2,6 @@
 
 import type { Warranty } from '@/lib/types';
 import { sendReminderEmail } from '@/lib/email';
-import { getAuth } from 'firebase-admin/auth';
-import { initializeFirebaseAdmin } from '@/lib/firebase-admin';
 
 /**
  * Sends a reminder email for a specific user with their expiring and expired warranties.

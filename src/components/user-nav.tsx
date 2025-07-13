@@ -107,7 +107,7 @@ export default function UserNav() {
           description: result.message,
         });
       }
-    } catch (error: any) {
+    } catch (error: any) => {
       console.error("Error sending reminder:", error);
       toast({
         variant: 'destructive',
