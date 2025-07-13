@@ -153,7 +153,7 @@ export default function UserNav() {
           <DropdownMenuItem>Settings</DropdownMenuItem>
           <DropdownMenuItem onSelect={handleSendReminder} disabled={isSending}>
             {isSending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            Test Reminder Email
+            Send Reminder Now
           </DropdownMenuItem>
         </DropdownMenuGroup>
         <DropdownMenuSeparator />
