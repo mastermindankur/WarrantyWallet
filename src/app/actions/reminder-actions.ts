@@ -1,52 +1,53 @@
 'use server';
 
-import { collection, query, where, getDocs, Timestamp } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
 import type { Warranty } from '@/lib/types';
 import { sendReminderEmail } from '@/lib/email';
-import { addDays, isPast } from 'date-fns';
+import { getAuth } from 'firebase-admin/auth';
+import { initializeFirebaseAdmin } from '@/lib/firebase-admin';
 
 /**
- * Fetches expiring warranties for a specific user and sends a test reminder email.
+ * Sends a reminder email for a specific user with their expiring warranties.
  * This action is called from the client and runs on the server.
- * @param userId - The UID of the user to check warranties for.
+ * @param {object} payload - The data for the reminder.
+ * @param {string} payload.userEmail - The email of the user to send the reminder to.
+ * @param {Warranty[]} payload.expiringWarranties - A list of warranties that are expiring.
  * @returns An object indicating success or failure with a corresponding message.
  */
-export async function sendTestReminder(userId: string): Promise<{ success: boolean; message: string }> {
-  if (!userId) {
-    return { success: false, message: 'User ID is missing.' };
+export async function sendTestReminder({
+  userEmail,
+  expiringWarranties,
+}: {
+  userEmail: string;
+  expiringWarranties: any[]; // Pass serialized data
+}): Promise<{ success: boolean; message: string }> {
+  if (!userEmail || !expiringWarranties) {
+    return { success: false, message: 'User email or warranty data is missing.' };
   }
-  
-  if (!db) {
-    return { success: false, message: 'Database connection is not configured.' };
+
+  if (expiringWarranties.length === 0) {
+    return { success: true, message: 'No warranties are expiring soon. No email sent.' };
   }
 
   try {
-    const now = new Date();
-    // Look for warranties expiring in the next 30 days
-    const expiryLimit = addDays(now, 30);
+    // The warranties are already fetched from the client, so we just need to send the email.
+    // The dates are strings, so we convert them back to Date objects for the email template.
+    const warrantiesWithDates = expiringWarranties.map((w) => ({
+      ...w,
+      expiryDate: new Date(w.expiryDate),
+    }))
 
-    const q = query(
-      collection(db, 'warranties'),
-      where('userId', '==', userId),
-      where('expiryDate', '<=', Timestamp.fromDate(expiryLimit)),
-      where('expiryDate', '>=', Timestamp.fromDate(now))
-    );
+    await sendReminderEmail({
+      userEmail,
+      warranties: warrantiesWithDates,
+    });
 
-    const querySnapshot = await getDocs(q);
-    
-    // This part requires getting the user's email, which we can't do securely on the server
-    // without the Admin SDK. For a test, we will assume a placeholder or require it to be passed.
-    // The best approach is to pass it from the client.
-    // For now, let's return an error if the user's email isn't available.
-    return { success: false, message: 'This is a placeholder. To complete this, pass the user\'s email to this action.' };
-
+    return { success: true, message: 'Test reminder email sent successfully!' };
 
   } catch (error: any) {
     console.error('Error in sendTestReminder action:', error);
-    // Check for Firestore permission errors
-    if (error.code === 'permission-denied') {
-        return { success: false, message: 'Database permission denied. Please check your Firestore security rules.' };
+    // Check for specific error types if needed, otherwise return a generic message.
+    if (error.message.includes('Resend')) {
+         return { success: false, message: 'Email provider error. Please check server logs.' };
     }
     return { success: false, message: error.message || 'An unknown error occurred.' };
   }

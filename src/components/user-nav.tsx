@@ -12,13 +12,15 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { useAuth } from '@/contexts/auth-context';
-import { auth } from '@/lib/firebase';
+import { auth, db } from '@/lib/firebase';
 import { signOut } from 'firebase/auth';
 import { useRouter } from 'next/navigation';
 import { useToast } from '@/hooks/use-toast';
 import { sendTestReminder } from '@/app/actions/reminder-actions';
 import { useState } from 'react';
 import { Loader2 } from 'lucide-react';
+import { collection, query, where, getDocs, Timestamp } from 'firebase/firestore';
+import { addDays } from 'date-fns';
 
 export default function UserNav() {
   const { user } = useAuth();
@@ -34,7 +36,7 @@ export default function UserNav() {
   };
   
   const handleSendReminder = async () => {
-    if (!user) {
+    if (!user || !db) {
       toast({
         variant: 'destructive',
         title: 'Error',
@@ -45,11 +47,38 @@ export default function UserNav() {
 
     setIsSending(true);
     try {
-      const result = await sendTestReminder(user.uid);
+      // 1. Fetch expiring warranties on the client
+      const now = new Date();
+      const expiryLimit = addDays(now, 30);
+      
+      const q = query(
+        collection(db, 'warranties'),
+        where('userId', '==', user.uid),
+        where('expiryDate', '<=', Timestamp.fromDate(expiryLimit)),
+        where('expiryDate', '>=', Timestamp.fromDate(now))
+      );
+      
+      const querySnapshot = await getDocs(q);
+      const expiringWarranties = querySnapshot.docs.map(doc => {
+          const data = doc.data();
+          // Serialize data for the server action
+          return {
+              ...data,
+              id: doc.id,
+              purchaseDate: (data.purchaseDate as Timestamp).toDate().toISOString(),
+              expiryDate: (data.expiryDate as Timestamp).toDate().toISOString(),
+          }
+      });
+      
+      // 2. Pass the data to the server action
+      const result = await sendTestReminder({
+          userEmail: user.email!,
+          expiringWarranties: expiringWarranties,
+      });
 
       if (result.success) {
         toast({
-          title: 'Reminder Sent',
+          title: 'Success',
           description: result.message,
         });
       } else {
@@ -60,6 +89,7 @@ export default function UserNav() {
         });
       }
     } catch (error: any) {
+      console.error("Error sending reminder:", error);
       toast({
         variant: 'destructive',
         title: 'An Unexpected Error Occurred',
