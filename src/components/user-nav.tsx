@@ -1,3 +1,4 @@
+
 'use client';
 
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -19,7 +20,7 @@ import { useToast } from '@/hooks/use-toast';
 import { sendTestReminder } from '@/app/actions/reminder-actions';
 import { useState } from 'react';
 import { Loader2 } from 'lucide-react';
-import { collection, query, where, getDocs, Timestamp } from 'firebase/firestore';
+import { collection, query, where, getDocs, Timestamp, orderBy, limit } from 'firebase/firestore';
 import { addDays, subDays } from 'date-fns';
 
 export default function UserNav() {
@@ -59,12 +60,15 @@ export default function UserNav() {
         where('expiryDate', '>=', Timestamp.fromDate(now))
       );
       
-      // Query for warranties that have already expired (within the last year for relevance)
+      // Query for warranties that have already expired (most recent 50)
+      // Firestore does not allow two range filters on the same field in a single query.
+      // So we will query for expired items and sort by expiry date descending to get the most recent ones.
       const expiredQuery = query(
         collection(db, 'warranties'),
         where('userId', '==', user.uid),
         where('expiryDate', '<', Timestamp.fromDate(now)),
-        where('expiryDate', '>=', Timestamp.fromDate(subDays(now, 365)))
+        orderBy('expiryDate', 'desc'),
+        limit(50) // Limit to the 50 most recently expired warranties
       );
       
       const [expiringSnapshot, expiredSnapshot] = await Promise.all([
