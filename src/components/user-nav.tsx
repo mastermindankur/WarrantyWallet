@@ -15,16 +15,59 @@ import { useAuth } from '@/contexts/auth-context';
 import { auth } from '@/lib/firebase';
 import { signOut } from 'firebase/auth';
 import { useRouter } from 'next/navigation';
+import { useToast } from '@/hooks/use-toast';
+import { sendTestReminder } from '@/app/actions/reminder-actions';
+import { useState } from 'react';
+import { Loader2 } from 'lucide-react';
 
 export default function UserNav() {
   const { user } = useAuth();
   const router = useRouter();
+  const { toast } = useToast();
+  const [isSending, setIsSending] = useState(false);
 
   const handleLogout = async () => {
     if (auth) {
       await signOut(auth);
     }
     router.push('/login');
+  };
+  
+  const handleSendReminder = async () => {
+    if (!user) {
+      toast({
+        variant: 'destructive',
+        title: 'Error',
+        description: 'You must be logged in to send a test reminder.',
+      });
+      return;
+    }
+
+    setIsSending(true);
+    try {
+      const result = await sendTestReminder(user.uid, user.email || '');
+
+      if (result.success) {
+        toast({
+          title: 'Reminder Sent',
+          description: result.message,
+        });
+      } else {
+        toast({
+          variant: 'destructive',
+          title: 'Failed to Send Reminder',
+          description: result.message,
+        });
+      }
+    } catch (error: any) {
+      toast({
+        variant: 'destructive',
+        title: 'An Unexpected Error Occurred',
+        description: error.message || 'Please try again.',
+      });
+    } finally {
+      setIsSending(false);
+    }
   };
 
   if (!user) {
@@ -59,6 +102,10 @@ export default function UserNav() {
         <DropdownMenuGroup>
           <DropdownMenuItem>Profile</DropdownMenuItem>
           <DropdownMenuItem>Settings</DropdownMenuItem>
+          <DropdownMenuItem onSelect={handleSendReminder} disabled={isSending}>
+            {isSending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            Test Reminder Email
+          </DropdownMenuItem>
         </DropdownMenuGroup>
         <DropdownMenuSeparator />
         <DropdownMenuItem onClick={handleLogout}>
