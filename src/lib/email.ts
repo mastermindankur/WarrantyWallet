@@ -64,10 +64,10 @@ export async function sendReminderEmail({ userEmail, expiringWarranties, expired
                     <div class="warranty-item">
                         <div class="product-info">
                             <strong class="product-name">${w.productName}</strong>
-                            <span class="expiry-detail">${format(w.expiryDate, 'MMM d, yyyy')}</span>
-                        </div>
-                        <div class="expiry-status">
-                            ${formatRemainingTimeForEmail(w.expiryDate)}
+                            <div class="expiry-detail">
+                                <span class="expiry-date">${format(w.expiryDate, 'MMM d, yyyy')}</span>
+                                <span class="expiry-status">${formatRemainingTimeForEmail(w.expiryDate)}</span>
+                            </div>
                         </div>
                     </div>
                 `).join('')}
@@ -128,9 +128,6 @@ export async function sendReminderEmail({ userEmail, expiringWarranties, expired
         }
         .warranty-item {
             padding: 12px 0;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
             border-bottom: 1px solid #f0f0f0;
         }
         .warranty-item:last-child {
@@ -145,16 +142,19 @@ export async function sendReminderEmail({ userEmail, expiringWarranties, expired
             font-weight: 600;
             color: #333;
             font-size: 16px;
+            margin-bottom: 4px;
         }
         .expiry-detail {
             font-size: 14px;
             color: #7f7f7f;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            align-items: center;
         }
         .expiry-status {
-            white-space: nowrap;
-            text-align: right;
-            font-size: 14px;
             font-weight: 500;
+            color: #333;
         }
         .button-container {
             text-align: center;
