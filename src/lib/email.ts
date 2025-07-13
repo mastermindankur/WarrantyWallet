@@ -1,6 +1,6 @@
 import { Resend } from 'resend';
 import type { Warranty } from './types';
-import { format, formatDistanceToNowStrict, isPast } from 'date-fns';
+import { format, isPast, intervalToDuration } from 'date-fns';
 
 let resend: Resend | null = null;
 if (process.env.RESEND_API_KEY && process.env.FROM_EMAIL) {
@@ -16,10 +16,27 @@ interface SendReminderEmailParams {
 }
 
 function formatRemainingTimeForEmail(expiryDate: Date): string {
-    if (isPast(expiryDate)) {
-        return `Expired ${formatDistanceToNowStrict(expiryDate, { addSuffix: true })}`;
+    const now = new Date();
+    const duration = intervalToDuration({
+      start: now,
+      end: expiryDate,
+    });
+  
+    const parts = [];
+    if (duration.years && duration.years > 0) parts.push(`${duration.years} year${duration.years > 1 ? 's' : ''}`);
+    if (duration.months && duration.months > 0) parts.push(`${duration.months} month${duration.months > 1 ? 's' : ''}`);
+    if (duration.days && duration.days > 0) parts.push(`${duration.days} day${duration.days > 1 ? 's' : ''}`);
+  
+    if (parts.length === 0) {
+      return isPast(expiryDate) ? 'Expired today' : 'Expires today';
     }
-    return `Expires in ${formatDistanceToNowStrict(expiryDate)}`;
+  
+    const formattedDuration = parts.join(', ');
+  
+    if (isPast(expiryDate)) {
+      return `Expired ${formattedDuration} ago`;
+    }
+    return `Expires in ${formattedDuration}`;
 }
 
 export async function sendReminderEmail({ userEmail, expiringWarranties, expiredWarranties }: SendReminderEmailParams) {
