@@ -40,8 +40,8 @@ export async function sendReminderEmail({ userEmail, expiringWarranties, expired
             <div class="warranty-list">
                 ${warranties.map(w => `
                     <div class="warranty-item">
-                        <strong>${w.productName}</strong>
-                        <span>${isExpired ? 'Expired on' : 'Expires on'} ${format(w.expiryDate, 'MMM d, yyyy')}</span>
+                        <strong class="product-name">${w.productName}</strong>
+                        <span class="expiry-date">${isExpired ? 'Expired on' : 'Expires on'} ${format(w.expiryDate, 'MMM d, yyyy')}</span>
                     </div>
                 `).join('')}
             </div>
@@ -103,14 +103,19 @@ export async function sendReminderEmail({ userEmail, expiringWarranties, expired
             padding: 12px 0;
             display: flex;
             justify-content: space-between;
+            align-items: center;
             border-bottom: 1px solid #f0f0f0;
         }
         .warranty-item:last-child {
             border-bottom: none;
         }
-        .warranty-item strong {
+        .product-name {
             font-weight: 600;
             color: #333;
+            padding-right: 16px;
+        }
+        .expiry-date {
+            white-space: nowrap;
         }
         .button-container {
             text-align: center;
