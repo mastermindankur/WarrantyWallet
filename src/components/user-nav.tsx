@@ -45,7 +45,7 @@ export default function UserNav() {
 
     setIsSending(true);
     try {
-      const result = await sendTestReminder(user.uid, user.email || '');
+      const result = await sendTestReminder(user.uid);
 
       if (result.success) {
         toast({
