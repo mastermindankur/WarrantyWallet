@@ -20,7 +20,7 @@ import { sendTestReminder } from '@/app/actions/reminder-actions';
 import { useState } from 'react';
 import { Loader2 } from 'lucide-react';
 import { collection, query, where, getDocs, Timestamp } from 'firebase/firestore';
-import { addDays } from 'date-fns';
+import { addDays, subDays } from 'date-fns';
 
 export default function UserNav() {
   const { user } = useAuth();
@@ -47,33 +47,52 @@ export default function UserNav() {
 
     setIsSending(true);
     try {
-      // 1. Fetch expiring warranties on the client
+      // 1. Fetch expiring and expired warranties on the client
       const now = new Date();
       const expiryLimit = addDays(now, 30);
       
-      const q = query(
+      // Query for warranties expiring soon (next 30 days)
+      const expiringQuery = query(
         collection(db, 'warranties'),
         where('userId', '==', user.uid),
         where('expiryDate', '<=', Timestamp.fromDate(expiryLimit)),
         where('expiryDate', '>=', Timestamp.fromDate(now))
       );
       
-      const querySnapshot = await getDocs(q);
-      const expiringWarranties = querySnapshot.docs.map(doc => {
-          const data = doc.data();
-          // Serialize data for the server action
-          return {
-              ...data,
-              id: doc.id,
-              purchaseDate: (data.purchaseDate as Timestamp).toDate().toISOString(),
-              expiryDate: (data.expiryDate as Timestamp).toDate().toISOString(),
-          }
-      });
+      // Query for warranties that have already expired (within the last year for relevance)
+      const expiredQuery = query(
+        collection(db, 'warranties'),
+        where('userId', '==', user.uid),
+        where('expiryDate', '<', Timestamp.fromDate(now)),
+        where('expiryDate', '>=', Timestamp.fromDate(subDays(now, 365)))
+      );
+      
+      const [expiringSnapshot, expiredSnapshot] = await Promise.all([
+        getDocs(expiringQuery),
+        getDocs(expiredQuery)
+      ]);
+
+      const serializeWarranties = (snapshot: any) => {
+          return snapshot.docs.map((doc: any) => {
+              const data = doc.data();
+              // Serialize data for the server action
+              return {
+                  ...data,
+                  id: doc.id,
+                  purchaseDate: (data.purchaseDate as Timestamp).toDate().toISOString(),
+                  expiryDate: (data.expiryDate as Timestamp).toDate().toISOString(),
+              }
+          });
+      }
+
+      const expiringWarranties = serializeWarranties(expiringSnapshot);
+      const expiredWarranties = serializeWarranties(expiredSnapshot);
       
       // 2. Pass the data to the server action
       const result = await sendTestReminder({
           userEmail: user.email!,
-          expiringWarranties: expiringWarranties,
+          expiringWarranties,
+          expiredWarranties,
       });
 
       if (result.success) {

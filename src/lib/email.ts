@@ -9,13 +9,18 @@ if (process.env.RESEND_API_KEY && process.env.FROM_EMAIL) {
     console.warn("Resend configuration is missing. Emails will not be sent. Please set RESEND_API_KEY and FROM_EMAIL in your .env file.");
 }
 
+interface SendReminderEmailParams {
+    userEmail: string;
+    expiringWarranties: Warranty[];
+    expiredWarranties: Warranty[];
+}
 
-export async function sendReminderEmail({ userEmail, warranties }: { userEmail: string; warranties: Warranty[] }) {
+export async function sendReminderEmail({ userEmail, expiringWarranties, expiredWarranties }: SendReminderEmailParams) {
     if (!resend) {
         throw new Error("Email provider (Resend) is not configured on the server.");
     }
 
-    if (!warranties || warranties.length === 0) {
+    if (expiringWarranties.length === 0 && expiredWarranties.length === 0) {
         return; // No warranties, no email to send.
     }
 
@@ -27,18 +32,34 @@ export async function sendReminderEmail({ userEmail, warranties }: { userEmail: 
     // Construct the URL to the dashboard
     const dashboardUrl = process.env.NEXT_PUBLIC_APP_URL ? `${process.env.NEXT_PUBLIC_APP_URL}/dashboard` : 'https://warrantywallet.online/dashboard';
 
+    const renderWarrantySection = (title: string, warranties: Warranty[], isExpired = false) => {
+        if (warranties.length === 0) return '';
+        
+        return `
+            <h3 style="color: ${isExpired ? '#c00' : '#005050'}; font-size: 18px; margin-top: 20px; border-bottom: 2px solid #e0e0e0; padding-bottom: 5px;">${title}</h3>
+            <div class="warranty-list">
+                ${warranties.map(w => `
+                    <div class="warranty-item">
+                        <strong>${w.productName}</strong>
+                        <span>${isExpired ? 'Expired on' : 'Expires on'} ${format(w.expiryDate, 'MMM d, yyyy')}</span>
+                    </div>
+                `).join('')}
+            </div>
+        `;
+    };
+
     try {
         await resend.emails.send({
             from: fromEmail,
             to: userEmail,
-            subject: 'Your Upcoming Warranty Expirations',
+            subject: 'Your Warranty Status Update from WarrantyWallet',
             html: `
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Warranty Expiration Reminder</title>
+    <title>Warranty Status Update</title>
     <style>
         body {
             margin: 0;
@@ -75,19 +96,21 @@ export async function sendReminderEmail({ userEmail, warranties }: { userEmail: 
             margin: 0 0 16px;
         }
         .warranty-list {
-            border-top: 1px solid #e0e0e0;
-            border-bottom: 1px solid #e0e0e0;
-            padding: 16px 0;
-            margin: 16px 0;
+            padding: 10px 0;
+            margin: 10px 0;
         }
         .warranty-item {
-            padding: 8px 0;
+            padding: 12px 0;
             display: flex;
             justify-content: space-between;
+            border-bottom: 1px solid #f0f0f0;
+        }
+        .warranty-item:last-child {
+            border-bottom: none;
         }
         .warranty-item strong {
             font-weight: 600;
-            color: #005050;
+            color: #333;
         }
         .button-container {
             text-align: center;
@@ -118,16 +141,12 @@ export async function sendReminderEmail({ userEmail, warranties }: { userEmail: 
         </div>
         <div class="content">
             <p>Hi there,</p>
-            <p>This is a friendly reminder that the following product warranties are expiring soon:</p>
-            <div class="warranty-list">
-                ${warranties.map(w => `
-                    <div class="warranty-item">
-                        <strong>${w.productName}</strong>
-                        <span>Expires on ${format(w.expiryDate, 'MMM d, yyyy')}</span>
-                    </div>
-                `).join('')}
-            </div>
-            <p>You can view more details and manage your warranties by visiting your dashboard.</p>
+            <p>This is a summary of your product warranties that require your attention.</p>
+            
+            ${renderWarrantySection('Expiring Soon', expiringWarranties)}
+            ${renderWarrantySection('Expired - Action Recommended', expiredWarranties, true)}
+
+            <p style="margin-top: 24px;">You can view more details and manage all your warranties by visiting your dashboard.</p>
             <div class="button-container">
                 <a href="${dashboardUrl}" class="button">View My Dashboard</a>
             </div>
