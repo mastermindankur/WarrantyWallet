@@ -1,6 +1,6 @@
 import { Resend } from 'resend';
 import type { Warranty } from './types';
-import { format } from 'date-fns';
+import { format, formatDistanceToNowStrict, isPast } from 'date-fns';
 
 let resend: Resend | null = null;
 if (process.env.RESEND_API_KEY && process.env.FROM_EMAIL) {
@@ -13,6 +13,13 @@ interface SendReminderEmailParams {
     userEmail: string;
     expiringWarranties: Warranty[];
     expiredWarranties: Warranty[];
+}
+
+function formatRemainingTimeForEmail(expiryDate: Date): string {
+    if (isPast(expiryDate)) {
+        return `Expired ${formatDistanceToNowStrict(expiryDate, { addSuffix: true })}`;
+    }
+    return `Expires in ${formatDistanceToNowStrict(expiryDate)}`;
 }
 
 export async function sendReminderEmail({ userEmail, expiringWarranties, expiredWarranties }: SendReminderEmailParams) {
@@ -41,7 +48,7 @@ export async function sendReminderEmail({ userEmail, expiringWarranties, expired
                 ${warranties.map(w => `
                     <div class="warranty-item">
                         <strong class="product-name">${w.productName}</strong>
-                        <span class="expiry-date">${isExpired ? 'Expired on' : 'Expires on'} ${format(w.expiryDate, 'MMM d, yyyy')}</span>
+                        <span class="expiry-date">${formatRemainingTimeForEmail(w.expiryDate)}</span>
                     </div>
                 `).join('')}
             </div>

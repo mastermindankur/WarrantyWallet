@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { format, formatDistanceToNow, isPast, intervalToDuration } from 'date-fns';
+import { format, formatDistanceToNowStrict, isPast, intervalToDuration } from 'date-fns';
 import { doc, deleteDoc } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
 import {
@@ -45,35 +45,11 @@ interface WarrantyCardProps {
 }
 
 function formatRemainingTime(expiryDate: Date): string {
-  const now = new Date();
-  if (isPast(expiryDate)) {
-    return `Expired ${formatDistanceToNow(expiryDate, { addSuffix: true })}`;
-  }
-
-  const duration = intervalToDuration({ start: now, end: expiryDate });
-
-  const years = duration.years || 0;
-  const months = duration.months || 0;
-  const days = duration.days || 0;
-
-  if (years > 0) {
-    const parts = [`${years} year${years > 1 ? 's' : ''}`];
-    if (months > 0) {
-      parts.push(`${months} month${months > 1 ? 's' : ''}`);
+    const now = new Date();
+    if (isPast(expiryDate)) {
+      return `Expired ${formatDistanceToNowStrict(expiryDate, { addSuffix: true })}`;
     }
-    return `Expires in ${parts.join(' and ')}`;
-  }
-
-  if (months > 0) {
-    return `Expires in ${months} month${months > 1 ? 's' : ''}`;
-  }
-  
-  if (days > 0) {
-      return `Expires in ${days} day${days > 1 ? 's' : ''}`;
-  }
-  
-  // For less than a day
-  return `Expires ${formatDistanceToNow(expiryDate, { addSuffix: true })}`;
+    return `Expires in ${formatDistanceToNowStrict(expiryDate)}`;
 }
 
 
