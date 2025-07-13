@@ -46,10 +46,11 @@ interface WarrantyCardProps {
 
 function formatRemainingTime(expiryDate: Date): string {
   const now = new Date();
-  const duration = intervalToDuration({
-    start: now,
-    end: expiryDate,
-  });
+  const hasExpired = isPast(expiryDate);
+
+  const duration = hasExpired
+    ? intervalToDuration({ start: expiryDate, end: now })
+    : intervalToDuration({ start: now, end: expiryDate });
 
   const parts = [];
   if (duration.years && duration.years > 0) parts.push(`${duration.years} year${duration.years > 1 ? 's' : ''}`);
@@ -57,15 +58,12 @@ function formatRemainingTime(expiryDate: Date): string {
   if (duration.days && duration.days > 0) parts.push(`${duration.days} day${duration.days > 1 ? 's' : ''}`);
 
   if (parts.length === 0) {
-    return isPast(expiryDate) ? 'Expired today' : 'Expires today';
+    return hasExpired ? 'Expired today' : 'Expires today';
   }
 
   const formattedDuration = parts.join(', ');
-
-  if (isPast(expiryDate)) {
-    return `Expired ${formattedDuration} ago`;
-  }
-  return `Expires in ${formattedDuration}`;
+  
+  return hasExpired ? `Expired ${formattedDuration} ago` : `Expires in ${formattedDuration}`;
 }
 
 
