@@ -24,26 +24,120 @@ export async function sendReminderEmail({ userEmail, warranties }: { userEmail: 
         throw new Error("FROM_EMAIL is not set in environment variables.");
     }
     
+    // Construct the URL to the dashboard
+    const dashboardUrl = process.env.NEXT_PUBLIC_APP_URL ? `${process.env.NEXT_PUBLIC_APP_URL}/dashboard` : 'https://warrantywallet.online/dashboard';
+
     try {
         await resend.emails.send({
             from: fromEmail,
             to: userEmail,
             subject: 'Your Upcoming Warranty Expirations',
             html: `
-                <h1>Warranty Reminders from WarrantyWallet</h1>
-                <p>Hi there!</p>
-                <p>This is a friendly reminder that the following product warranties are expiring soon:</p>
-                <ul>
-                    ${warranties.map(w => `
-                        <li>
-                            <strong>${w.productName}</strong> - Expires on ${format(w.expiryDate, 'MMM d, yyyy')}
-                        </li>
-                    `).join('')}
-                </ul>
-                <p>Log in to your WarrantyWallet account to view more details.</p>
-                <p>Best,</p>
-                <p>The WarrantyWallet Team</p>
-            `,
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Warranty Expiration Reminder</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: #F0F0F0;
+            font-family: 'Inter', sans-serif, Arial;
+            color: #0a0a0a;
+        }
+        .container {
+            max-width: 600px;
+            margin: 20px auto;
+            background-color: #ffffff;
+            border-radius: 8px;
+            overflow: hidden;
+            border: 1px solid #e0e0e0;
+        }
+        .header {
+            background-color: #008080;
+            color: #ffffff;
+            padding: 24px;
+            text-align: center;
+        }
+        .header h1 {
+            margin: 0;
+            font-size: 24px;
+            font-weight: 700;
+        }
+        .content {
+            padding: 24px;
+        }
+        .content p {
+            font-size: 16px;
+            line-height: 1.5;
+            margin: 0 0 16px;
+        }
+        .warranty-list {
+            border-top: 1px solid #e0e0e0;
+            border-bottom: 1px solid #e0e0e0;
+            padding: 16px 0;
+            margin: 16px 0;
+        }
+        .warranty-item {
+            padding: 8px 0;
+            display: flex;
+            justify-content: space-between;
+        }
+        .warranty-item strong {
+            font-weight: 600;
+            color: #005050;
+        }
+        .button-container {
+            text-align: center;
+            margin: 24px 0;
+        }
+        .button {
+            background-color: #FFD700;
+            color: #0a0a0a;
+            padding: 14px 28px;
+            text-decoration: none;
+            border-radius: 6px;
+            font-weight: 600;
+            display: inline-block;
+            border: none;
+        }
+        .footer {
+            padding: 24px;
+            text-align: center;
+            font-size: 12px;
+            color: #7f7f7f;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>WarrantyWallet</h1>
+        </div>
+        <div class="content">
+            <p>Hi there,</p>
+            <p>This is a friendly reminder that the following product warranties are expiring soon:</p>
+            <div class="warranty-list">
+                ${warranties.map(w => `
+                    <div class="warranty-item">
+                        <strong>${w.productName}</strong>
+                        <span>Expires on ${format(w.expiryDate, 'MMM d, yyyy')}</span>
+                    </div>
+                `).join('')}
+            </div>
+            <p>You can view more details and manage your warranties by visiting your dashboard.</p>
+            <div class="button-container">
+                <a href="${dashboardUrl}" class="button">View My Dashboard</a>
+            </div>
+        </div>
+        <div class="footer">
+            <p>&copy; ${new Date().getFullYear()} WarrantyWallet. All rights reserved.</p>
+        </div>
+    </div>
+</body>
+</html>`,
         });
     } catch (error) {
         console.error("Failed to send email via Resend:", error);
