@@ -49,7 +49,7 @@ export async function sendTestReminder({
       expiredWarranties: expiredWithDates,
     });
 
-    return { success: true, message: 'Test reminder email sent successfully!' };
+    return { success: true, message: 'Reminder email sent successfully!' };
 
   } catch (error: any) {
     console.error('Error in sendTestReminder action:', error);
