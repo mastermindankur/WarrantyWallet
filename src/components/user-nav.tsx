@@ -61,8 +61,6 @@ export default function UserNav() {
       );
       
       // Query for warranties that have already expired (most recent 50)
-      // Firestore does not allow two range filters on the same field in a single query.
-      // So we will query for expired items and sort by expiry date descending to get the most recent ones.
       const expiredQuery = query(
         collection(db, 'warranties'),
         where('userId', '==', user.uid),
@@ -157,7 +155,7 @@ export default function UserNav() {
           <DropdownMenuItem>Settings</DropdownMenuItem>
           <DropdownMenuItem onSelect={handleSendReminder} disabled={isSending}>
             {isSending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            Send Reminder Now
+            Get Email Summary
           </DropdownMenuItem>
         </DropdownMenuGroup>
         <DropdownMenuSeparator />
