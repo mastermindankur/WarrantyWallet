@@ -35,3 +35,5 @@ export async function GET(request: Request) {
       details: "Please see the source code of this file (`src/app/api/cron/send-reminders/route.ts`) for more information on the new architecture.",
   }, { status: 410 }); // 410 Gone
 }
+
+    

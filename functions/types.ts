@@ -19,3 +19,5 @@ export interface Warranty {
   warrantyCardKey?: string;
   notes?: string;
 }
+
+    
