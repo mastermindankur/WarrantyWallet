@@ -17,13 +17,23 @@ var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (
 }) : function(o, v) {
     o["default"] = v;
 });
-var __importStar = (this && this.__importStar) || function (mod) {
-    if (mod && mod.__esModule) return mod;
-    var result = {};
-    if (mod != null) for (var k in mod) if (k !== "default" && Object.prototype.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
-    __setModuleDefault(result, mod);
-    return result;
-};
+var __importStar = (this && this.__importStar) || (function () {
+    var ownKeys = function(o) {
+        ownKeys = Object.getOwnPropertyNames || function (o) {
+            var ar = [];
+            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
+            return ar;
+        };
+        return ownKeys(o);
+    };
+    return function (mod) {
+        if (mod && mod.__esModule) return mod;
+        var result = {};
+        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
+        __setModuleDefault(result, mod);
+        return result;
+    };
+})();
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.dailyReminderJob = void 0;
 /**
@@ -82,12 +92,7 @@ exports.dailyReminderJob = functions.scheduler.onSchedule('every day 09:00', asy
         const processSnapshot = (snapshot, type) => {
             snapshot.docs.forEach((doc) => {
                 const data = doc.data();
-                const warranty = {
-                    ...data,
-                    id: doc.id,
-                    purchaseDate: data.purchaseDate.toDate(),
-                    expiryDate: data.expiryDate.toDate(),
-                };
+                const warranty = Object.assign(Object.assign({}, data), { id: doc.id, purchaseDate: data.purchaseDate.toDate(), expiryDate: data.expiryDate.toDate() });
                 const userId = warranty.userId;
                 if (!userWarrantiesMap.has(userId)) {
                     userWarrantiesMap.set(userId, { upcoming: [], expired: [] });
@@ -134,30 +139,34 @@ exports.dailyReminderJob = functions.scheduler.onSchedule('every day 09:00', asy
             }
         }
         // 4. Process engagement emails for users without warranties
-        const allUsers = await auth.listUsers();
-        for (const user of allUsers.users) {
-            if (!userWarrantiesMap.has(user.uid)) {
-                try {
-                    let userEmail;
-                    if (IS_TEST_MODE) {
-                        userEmail = TEST_EMAIL_ADDRESS;
+        let nextPageToken;
+        do {
+            const listUsersResult = await auth.listUsers(1000, nextPageToken);
+            for (const user of listUsersResult.users) {
+                if (!userWarrantiesMap.has(user.uid)) {
+                    try {
+                        let userEmail;
+                        if (IS_TEST_MODE) {
+                            userEmail = TEST_EMAIL_ADDRESS;
+                        }
+                        else {
+                            userEmail = user.email;
+                        }
+                        if (userEmail) {
+                            await sendEngagementEmail({ userEmail });
+                            logger.info(`Successfully sent engagement email to ${userEmail} for user ${user.uid}`);
+                        }
+                        else {
+                            logger.warn(`Could not find email for user ${user.uid} for engagement email. Skipping.`);
+                        }
                     }
-                    else {
-                        userEmail = user.email;
+                    catch (error) {
+                        logger.error(`Failed to send engagement email for user ${user.uid}:`, error);
                     }
-                    if (userEmail) {
-                        await sendEngagementEmail({ userEmail });
-                        logger.info(`Successfully sent engagement email to ${userEmail} for user ${user.uid}`);
-                    }
-                    else {
-                        logger.warn(`Could not find email for user ${user.uid} for engagement email. Skipping.`);
-                    }
-                }
-                catch (error) {
-                    logger.error(`Failed to send engagement email for user ${user.uid}:`, error);
                 }
             }
-        }
+            nextPageToken = listUsersResult.pageToken;
+        } while (nextPageToken);
     }
     catch (error) {
         logger.error("Error executing daily reminder job:", error);
@@ -200,7 +209,7 @@ async function sendReminderEmail({ userEmail, upcomingWarranties, expiredWarrant
                         <div class="product-name">${w.productName}</div>
                         <div class="expiry-detail">
                             <div class="expiry-date">Expires: ${(0, date_fns_1.format)(w.expiryDate, 'MMM d, yyyy')}</div>
-                            <div class="expiry-status">(${(formatRemainingTimeForEmail(w.expiryDate))})</div>
+                            <div class="expiry-status">(${formatRemainingTimeForEmail(w.expiryDate)})</div>
                         </div>
                     </div>
                 `).join('')}
@@ -319,3 +328,5 @@ async function sendEngagementEmail({ userEmail }) {
     }
 }
 //# sourceMappingURL=index.js.map
+
+    

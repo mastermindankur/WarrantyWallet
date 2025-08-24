@@ -124,28 +124,33 @@ export const dailyReminderJob = functions.scheduler.onSchedule('every day 09:00'
         }
         
         // 4. Process engagement emails for users without warranties
-        const allUsers = await auth.listUsers();
-        for (const user of allUsers.users) {
-            if (!userWarrantiesMap.has(user.uid)) {
-                try {
-                    let userEmail: string | undefined;
-                    if (IS_TEST_MODE) {
-                        userEmail = TEST_EMAIL_ADDRESS;
-                    } else {
-                        userEmail = user.email;
-                    }
+        let nextPageToken;
+        do {
+            const listUsersResult = await auth.listUsers(1000, nextPageToken);
+            for (const user of listUsersResult.users) {
+                if (!userWarrantiesMap.has(user.uid)) {
+                    try {
+                        let userEmail: string | undefined;
+                        if (IS_TEST_MODE) {
+                            userEmail = TEST_EMAIL_ADDRESS;
+                        } else {
+                            userEmail = user.email;
+                        }
 
-                    if (userEmail) {
-                        await sendEngagementEmail({ userEmail });
-                        logger.info(`Successfully sent engagement email to ${userEmail} for user ${user.uid}`);
-                    } else {
-                        logger.warn(`Could not find email for user ${user.uid} for engagement email. Skipping.`);
+                        if (userEmail) {
+                            await sendEngagementEmail({ userEmail });
+                            logger.info(`Successfully sent engagement email to ${userEmail} for user ${user.uid}`);
+                        } else {
+                            logger.warn(`Could not find email for user ${user.uid} for engagement email. Skipping.`);
+                        }
+                    } catch (error) {
+                        logger.error(`Failed to send engagement email for user ${user.uid}:`, error);
                     }
-                } catch (error) {
-                    logger.error(`Failed to send engagement email for user ${user.uid}:`, error);
                 }
             }
-        }
+            nextPageToken = listUsersResult.pageToken;
+        } while (nextPageToken);
+
 
     } catch (error) {
         logger.error("Error executing daily reminder job:", error);
@@ -330,6 +335,5 @@ async function sendEngagementEmail({ userEmail }: SendEngagementEmailParams) {
         throw new Error("There was an error sending the engagement email.");
     }
 }
-    
 
     
