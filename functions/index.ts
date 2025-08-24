@@ -1,4 +1,3 @@
-
 'use server';
 /**
  * @fileoverview A daily scheduled Cloud Function to send warranty reminder emails.
@@ -335,5 +334,3 @@ async function sendEngagementEmail({ userEmail }: SendEngagementEmailParams) {
         throw new Error("There was an error sending the engagement email.");
     }
 }
-
-    
