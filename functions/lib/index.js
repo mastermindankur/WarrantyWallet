@@ -24,7 +24,7 @@ var __importStar = (this && this.__importStar) || function (mod) {
 };
 var _a, _b;
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.dailyreminderemails = void 0;
+exports.dailyReminderJob = void 0;
 /**
  * This file is not part of the Next.js app. It is a Google Cloud Function.
  * It must be deployed separately using the Firebase CLI.
@@ -55,7 +55,7 @@ if (!fromEmail) {
     console.warn("From email is missing from config. Run 'firebase functions:config:set from.email=\"YOUR_EMAIL\"'");
 }
 // --- Main Cloud Function ---
-exports.dailyreminderemails = (0, scheduler_1.onSchedule)("every day 09:00", async (event) => {
+exports.dailyReminderJob = (0, scheduler_1.onSchedule)("every day 09:00", async (event) => {
     console.log("Starting 'Hello World' email job.");
     if (!resend || !fromEmail) {
         console.error("Aborting job. Resend is not configured correctly. Check your Firebase Functions config by running 'firebase functions:config:get'");

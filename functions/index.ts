@@ -7,7 +7,6 @@
  * 2. Run `npm run deploy:functions` from the project root.
  */
 import { initializeApp } from "firebase-admin/app";
-import { getFirestore } from "firebase-admin/firestore";
 import * as functions from 'firebase-functions';
 import { onSchedule } from "firebase-functions/v2/scheduler";
 import { Resend } from "resend";
@@ -35,7 +34,7 @@ if (!fromEmail) {
 
 
 // --- Main Cloud Function ---
-export const dailyreminderemails = onSchedule(
+export const dailyReminderJob = onSchedule(
   "every day 09:00",
   async (event) => {
     console.log("Starting 'Hello World' email job.");
