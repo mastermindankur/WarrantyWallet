@@ -69,8 +69,9 @@ exports.dailyReminderJob = functions.scheduler.onSchedule('every day 09:00', asy
             `,
         });
         if (error) {
-            logger.error("Error response from Resend:", error);
-            throw new Error(`Resend failed to send email: ${error.message}`);
+            // Log the entire error object for better diagnostics
+            logger.error("Error response from Resend:", JSON.stringify(error, null, 2));
+            throw new Error(`Resend failed to send email. Details: ${JSON.stringify(error)}`);
         }
         logger.info(`Successfully sent test email to ${testUserEmail}. Response ID: ${data?.id}`);
     }
