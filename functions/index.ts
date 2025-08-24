@@ -224,6 +224,7 @@ async function sendReminderEmail({ userEmail, upcomingWarranties, expiredWarrant
         const { error } = await resend.emails.send({
             from: `WarrantyWallet <${fromEmail}>`,
             to: userEmail,
+            reply_to: fromEmail,
             subject: 'Your Warranty Status Update from WarrantyWallet',
             html: `
 <!DOCTYPE html>
@@ -289,6 +290,7 @@ async function sendEngagementEmail({ userEmail }: SendEngagementEmailParams) {
         const { error } = await resend.emails.send({
             from: `WarrantyWallet <${fromEmail}>`,
             to: userEmail,
+            reply_to: fromEmail,
             subject: 'Get Started with WarrantyWallet!',
             html: `
 <!DOCTYPE html>
