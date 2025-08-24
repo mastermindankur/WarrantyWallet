@@ -22,7 +22,6 @@ var __importStar = (this && this.__importStar) || function (mod) {
     __setModuleDefault(result, mod);
     return result;
 };
-var _a, _b, _c;
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.dailyreminderemails = void 0;
 /**
@@ -45,9 +44,9 @@ const db = (0, firestore_1.getFirestore)();
 // Initialize Resend using Firebase Functions Config
 let resend = null;
 const config = functions.config();
-const resendApiKey = (_a = config.resend) === null || _a === void 0 ? void 0 : _a.api_key;
-const fromEmail = (_b = config.from) === null || _b === void 0 ? void 0 : _b.email;
-const appUrl = (_c = config.app) === null || _c === void 0 ? void 0 : _c.url; // Force redeploy
+const resendApiKey = config.resend?.api_key;
+const fromEmail = config.from?.email;
+const appUrl = config.app?.url ?? 'https://warrantywallet.online';
 if (resendApiKey) {
     resend = new resend_1.Resend(resendApiKey);
 }
@@ -98,7 +97,7 @@ const renderWarrantySection = (title, warranties, isExpired = false) => {
     `;
 };
 const createEmailHtml = (expiringWarranties, expiredWarranties) => {
-    const dashboardUrl = `${appUrl !== null && appUrl !== void 0 ? appUrl : 'https://warrantywallet.online'}/dashboard`;
+    const dashboardUrl = `${appUrl}/dashboard`;
     return `
 <!DOCTYPE html>
 <html lang="en">
@@ -143,7 +142,6 @@ const createEmailHtml = (expiringWarranties, expiredWarranties) => {
 };
 // --- Main Cloud Function ---
 exports.dailyreminderemails = (0, scheduler_1.onSchedule)("every day 09:00", async (event) => {
-    var _a, _b, _c;
     console.log("Starting daily reminder email job.");
     console.log(`Resend API key is ${resendApiKey ? 'set.' : 'NOT SET.'}`);
     console.log(`From email is ${fromEmail ? 'set.' : 'NOT SET.'}`);
@@ -162,13 +160,18 @@ exports.dailyreminderemails = (0, scheduler_1.onSchedule)("every day 09:00", asy
     }
     const userWarrantiesMap = new Map();
     for (const doc of warrantiesSnapshot.docs) {
-        const warranty = Object.assign(Object.assign({ id: doc.id }, doc.data()), { purchaseDate: doc.data().purchaseDate.toDate(), expiryDate: doc.data().expiryDate.toDate() });
+        const warranty = {
+            id: doc.id,
+            ...doc.data(),
+            purchaseDate: doc.data().purchaseDate.toDate(),
+            expiryDate: doc.data().expiryDate.toDate(),
+        };
         const userId = warranty.userId;
         if (!userWarrantiesMap.has(userId)) {
             try {
                 const userDoc = await db.collection('users').doc(userId).get();
-                if (userDoc.exists && ((_a = userDoc.data()) === null || _a === void 0 ? void 0 : _a.email)) {
-                    userWarrantiesMap.set(userId, { email: (_b = userDoc.data()) === null || _b === void 0 ? void 0 : _b.email, warranties: [] });
+                if (userDoc.exists && userDoc.data()?.email) {
+                    userWarrantiesMap.set(userId, { email: userDoc.data()?.email, warranties: [] });
                 }
                 else {
                     console.warn(`User document or email not found for userId: ${userId}. Skipping.`);
@@ -180,7 +183,7 @@ exports.dailyreminderemails = (0, scheduler_1.onSchedule)("every day 09:00", asy
                 continue;
             }
         }
-        (_c = userWarrantiesMap.get(userId)) === null || _c === void 0 ? void 0 : _c.warranties.push(warranty);
+        userWarrantiesMap.get(userId)?.warranties.push(warranty);
     }
     for (const [userId, data] of userWarrantiesMap.entries()) {
         const { email, warranties } = data;

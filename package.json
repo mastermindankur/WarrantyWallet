@@ -10,7 +10,8 @@
     "start": "next start",
     "lint": "next lint",
     "typecheck": "tsc --noEmit",
-    "deploy:functions": "cd functions && npm install && npm run build && firebase deploy --only functions"
+    "predeploy:functions": "cd functions && npm install && npm run build",
+    "deploy:functions": "cd functions && firebase deploy --only functions"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.633.0",
@@ -71,5 +72,3 @@
     "typescript": "^5"
   }
 }
-
-    
