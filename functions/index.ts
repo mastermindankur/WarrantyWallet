@@ -33,6 +33,10 @@ if (resendApiKey) {
     logger.warn('RESEND_API_KEY is not configured in the environment.');
 }
 
+const IS_TEST_MODE = process.env.IS_TEST_MODE === 'true';
+const TEST_EMAIL_ADDRESS = 'mastermindankur@duck.com';
+
+
 /**
  * A scheduled function that runs daily, finds users with warranties,
  * and sends them a summary email. It also sends a reminder to users
@@ -89,22 +93,30 @@ export const dailyReminderJob = functions.scheduler.onSchedule('every day 09:00'
         processSnapshot(expiredSnapshot, 'expired');
 
         // 3. Process emails for users with warranties
-        const testUserEmail = 'mastermindankur@duck.com';
         for (const [userId, warranties] of userWarrantiesMap.entries()) {
             if (warranties.upcoming.length === 0 && warranties.expired.length === 0) {
                 continue;
             }
             
             try {
-                // In a real app, you would fetch the user's real email.
-                // const userRecord = await auth.getUser(userId);
-                // const userEmail = userRecord.email;
-                await sendReminderEmail({
-                    userEmail: testUserEmail,
-                    upcomingWarranties: warranties.upcoming,
-                    expiredWarranties: warranties.expired,
-                });
-                logger.info(`Successfully sent reminder email to test address ${testUserEmail} for user ${userId}`);
+                let userEmail: string | undefined;
+                if (IS_TEST_MODE) {
+                    userEmail = TEST_EMAIL_ADDRESS;
+                } else {
+                    const userRecord = await auth.getUser(userId);
+                    userEmail = userRecord.email;
+                }
+
+                if (userEmail) {
+                    await sendReminderEmail({
+                        userEmail: userEmail,
+                        upcomingWarranties: warranties.upcoming,
+                        expiredWarranties: warranties.expired,
+                    });
+                    logger.info(`Successfully sent reminder email to ${userEmail} for user ${userId}`);
+                } else {
+                     logger.warn(`Could not find email for user ${userId}. Skipping.`);
+                }
 
             } catch (error) {
                 logger.error(`Failed to process reminders for user ${userId}:`, error);
@@ -116,9 +128,19 @@ export const dailyReminderJob = functions.scheduler.onSchedule('every day 09:00'
         for (const user of allUsers.users) {
             if (!userWarrantiesMap.has(user.uid)) {
                 try {
-                    // Send to the test email for now
-                    await sendEngagementEmail({ userEmail: testUserEmail });
-                    logger.info(`Successfully sent engagement email to test address ${testUserEmail} for user ${user.uid}`);
+                    let userEmail: string | undefined;
+                    if (IS_TEST_MODE) {
+                        userEmail = TEST_EMAIL_ADDRESS;
+                    } else {
+                        userEmail = user.email;
+                    }
+
+                    if (userEmail) {
+                        await sendEngagementEmail({ userEmail });
+                        logger.info(`Successfully sent engagement email to ${userEmail} for user ${user.uid}`);
+                    } else {
+                        logger.warn(`Could not find email for user ${user.uid} for engagement email. Skipping.`);
+                    }
                 } catch (error) {
                     logger.error(`Failed to send engagement email for user ${user.uid}:`, error);
                 }
