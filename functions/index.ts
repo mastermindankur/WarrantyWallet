@@ -197,11 +197,11 @@ async function sendReminderEmail({ userEmail, upcomingWarranties, expiredWarrant
         .content { padding: 24px; }
         .content p { font-size: 16px; line-height: 1.5; margin: 0 0 16px; }
         .warranty-list { padding-top: 10px; }
-        .warranty-item { padding: 12px 0; border-bottom: 1px solid #f0f0f0; display: flex; justify-content: space-between; align-items: center; }
+        .warranty-item { padding: 12px 0; border-bottom: 1px solid #f0f0f0; }
         .warranty-item:last-child { border-bottom: none; }
-        .product-name { font-weight: 600; color: #333; font-size: 16px; }
-        .expiry-detail { font-size: 14px; color: #555; text-align: right; }
-        .expiry-date { display: block; }
+        .product-name { font-weight: 600; color: #333; font-size: 16px; margin-bottom: 4px; }
+        .expiry-detail { font-size: 14px; color: #555; }
+        .expiry-date { display: inline-block; margin-right: 8px; }
         .expiry-status { font-weight: 500; color: #333; }
         .button-container { text-align: center; margin: 24px 0; }
         .button { background-color: #FFD700; color: #0a0a0a; padding: 14px 28px; text-decoration: none; border-radius: 6px; font-weight: 600; display: inline-block; }
