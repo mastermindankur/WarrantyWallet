@@ -9,8 +9,7 @@
     "resend": "^3.5.0"
   },
   "devDependencies": {
-    "typescript": "^5",
-    "firebase-functions-test": "^3.3.0"
+    "typescript": "^5"
   },
   "scripts": {
     "build": "tsc",
@@ -18,7 +17,8 @@
     "shell": "npm run build && firebase functions:shell",
     "start": "npm run shell",
     "deploy": "firebase deploy --only functions",
-    "logs": "firebase functions:log"
+    "logs": "firebase functions:log",
+    "predeploy": "npm run build"
   },
   "engines": {
     "node": "18"
