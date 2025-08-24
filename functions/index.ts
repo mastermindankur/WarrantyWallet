@@ -23,6 +23,7 @@ let resend: Resend | null = null;
 const config = functions.config();
 const resendApiKey = config.resend?.api_key;
 const fromEmail = config.from?.email;
+const appUrl = config.app?.url ?? 'https://warrantywallet.online'; // Force redeploy
 
 if (resendApiKey) {
   resend = new Resend(resendApiKey);
@@ -88,7 +89,7 @@ const createEmailHtml = (
   expiringWarranties: Warranty[],
   expiredWarranties: Warranty[]
 ) => {
-    const dashboardUrl = config.app?.url ? `${config.app.url}/dashboard` : 'https://warrantywallet.online/dashboard';
+    const dashboardUrl = `${appUrl}/dashboard`;
 
     return `
 <!DOCTYPE html>
