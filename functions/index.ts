@@ -10,32 +10,28 @@ import {Resend} from 'resend';
 // This log runs when the function is initialized.
 logger.info('Function cold start: Initializing...');
 
-// Initialize Resend with the API key from function configuration
-// This is a secure way to store credentials
-let resend: Resend | null = null;
-try {
-  const resendApiKey = functions.config().resend.api_key;
-  if (resendApiKey) {
-    resend = new Resend(resendApiKey);
-  } else {
-    logger.warn('Resend API key is not configured.');
-  }
-} catch (error) {
-    logger.warn('Could not access functions.config().resend.api_key. Ensure config is set.');
-}
+// For 2nd Gen functions, we use process.env to access environment variables.
+// These are set during deployment.
+const resendApiKey = process.env.RESEND_API_KEY;
+const fromEmail = process.env.FROM_EMAIL;
 
+let resend: Resend | null = null;
+if (resendApiKey) {
+    resend = new Resend(resendApiKey);
+} else {
+    logger.warn('RESEND_API_KEY is not configured in the environment.');
+}
 
 export const dailyReminderJob = functions.pubsub.schedule('every day 09:00').onRun(async (context) => {
     logger.info("Hello from dailyReminderJob! The function triggered successfully.");
 
     if (!resend) {
-        logger.error("Resend is not configured. Aborting job.");
+        logger.error("Resend is not initialized. Aborting job.");
         return;
     }
-
-    const fromEmail = functions.config().from.email;
+    
     if (!fromEmail) {
-        logger.error("FROM_EMAIL is not configured. Aborting job.");
+        logger.error("FROM_EMAIL is not configured in the environment. Aborting job.");
         return;
     }
     
