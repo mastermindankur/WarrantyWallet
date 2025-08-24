@@ -41,7 +41,7 @@ exports.dailyreminderemails = void 0;
  *
  * To deploy:
  * 1. Make sure you have the Firebase CLI installed and are logged in.
- * 2. Run `firebase deploy --only functions` from the project root.
+ * 2. Run `npm run deploy:functions` from the project root.
  */
 const app_1 = require("firebase-admin/app");
 const firestore_1 = require("firebase-admin/firestore");
@@ -61,9 +61,12 @@ if (resendApiKey) {
     resend = new resend_1.Resend(resendApiKey);
 }
 else {
-    console.warn("Resend API key is missing. Run 'firebase functions:config:set resend.api_key=\"YOUR_KEY\"'");
+    console.warn("Resend API key is missing. Run 'firebase functions:config:set resend.api_key=\"YOUR_KEY\"' and redeploy.");
 }
-// --- Email Formatting Logic (copied from src/lib/email.ts for standalone function) ---
+if (!fromEmail) {
+    console.warn("From email is missing. Run 'firebase functions:config:set from.email=\"YOUR_EMAIL\"' and redeploy.");
+}
+// --- Email Formatting Logic ---
 function formatRemainingTimeForEmail(expiryDate) {
     const now = new Date();
     const hasExpired = (0, date_fns_1.isPast)(expiryDate);
@@ -104,7 +107,8 @@ const renderWarrantySection = (title, warranties, isExpired = false) => {
     `;
 };
 const createEmailHtml = (expiringWarranties, expiredWarranties) => {
-    const dashboardUrl = process.env.NEXT_PUBLIC_APP_URL ? `${process.env.NEXT_PUBLIC_APP_URL}/dashboard` : 'https://warrantywallet.online/dashboard';
+    var _a;
+    const dashboardUrl = ((_a = config.app) === null || _a === void 0 ? void 0 : _a.url) ? `${config.app.url}/dashboard` : 'https://warrantywallet.online/dashboard';
     return `
 <!DOCTYPE html>
 <html lang="en">
@@ -148,19 +152,15 @@ const createEmailHtml = (expiringWarranties, expiredWarranties) => {
 </html>`;
 };
 // --- Main Cloud Function ---
-// This function will run every day at 9:00 AM.
 exports.dailyreminderemails = (0, scheduler_1.onSchedule)("every day 09:00", async (event) => {
     var _a, _b, _c;
     console.log("Starting daily reminder email job.");
+    console.log(`Resend API key is ${resendApiKey ? 'set.' : 'NOT SET.'}`);
+    console.log(`From email is ${fromEmail ? 'set.' : 'NOT SET.'}`);
     if (!resend || !fromEmail) {
-        console.error("Aborting job. Resend is not configured correctly. Check your Firebase Functions config.");
-        if (!resend)
-            console.error("Reason: Resend API key is missing or invalid.");
-        if (!fromEmail)
-            console.error("Reason: 'From' email address is not set.");
+        console.error("Aborting job. Resend is not configured correctly. Check your Firebase Functions config by running 'firebase functions:config:get'");
         return;
     }
-    // Get all warranties that are either expiring in the next 30 days or already expired.
     const now = new Date();
     const expiryLimit = (0, date_fns_1.addDays)(now, 30);
     const warrantiesSnapshot = await db.collection("warranties")
@@ -170,7 +170,6 @@ exports.dailyreminderemails = (0, scheduler_1.onSchedule)("every day 09:00", asy
         console.log("No warranties found that need reminders. Job finished.");
         return;
     }
-    // Group warranties by user
     const userWarrantiesMap = new Map();
     for (const doc of warrantiesSnapshot.docs) {
         const warranty = Object.assign(Object.assign({ id: doc.id }, doc.data()), { purchaseDate: doc.data().purchaseDate.toDate(), expiryDate: doc.data().expiryDate.toDate() });
@@ -193,13 +192,12 @@ exports.dailyreminderemails = (0, scheduler_1.onSchedule)("every day 09:00", asy
         }
         (_c = userWarrantiesMap.get(userId)) === null || _c === void 0 ? void 0 : _c.warranties.push(warranty);
     }
-    // Process and send emails for each user
     for (const [userId, data] of userWarrantiesMap.entries()) {
         const { email, warranties } = data;
         const expiringWarranties = warranties.filter(w => !(0, date_fns_1.isPast)(w.expiryDate));
         const expiredWarranties = warranties.filter(w => (0, date_fns_1.isPast)(w.expiryDate));
         if (expiringWarranties.length === 0 && expiredWarranties.length === 0) {
-            continue; // Skip if no relevant warranties for this user
+            continue;
         }
         try {
             await resend.emails.send({
