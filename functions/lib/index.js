@@ -1,4 +1,38 @@
 "use strict";
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || (function () {
+    var ownKeys = function(o) {
+        ownKeys = Object.getOwnPropertyNames || function (o) {
+            var ar = [];
+            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
+            return ar;
+        };
+        return ownKeys(o);
+    };
+    return function (mod) {
+        if (mod && mod.__esModule) return mod;
+        var result = {};
+        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
+        __setModuleDefault(result, mod);
+        return result;
+    };
+})();
+var _a;
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.dailyreminderemails = void 0;
 /**
@@ -11,19 +45,21 @@ exports.dailyreminderemails = void 0;
  */
 const app_1 = require("firebase-admin/app");
 const firestore_1 = require("firebase-admin/firestore");
+const functions = __importStar(require("firebase-functions"));
 const scheduler_1 = require("firebase-functions/v2/scheduler");
 const resend_1 = require("resend");
 const date_fns_1 = require("date-fns");
 // Initialize Firebase Admin SDK
 (0, app_1.initializeApp)();
 const db = (0, firestore_1.getFirestore)();
-// Initialize Resend
+// Initialize Resend using Firebase Functions Config
 let resend = null;
-if (process.env.RESEND_API_KEY) {
-    resend = new resend_1.Resend(process.env.RESEND_API_KEY);
+const resendApiKey = (_a = functions.config().resend) === null || _a === void 0 ? void 0 : _a.api_key;
+if (resendApiKey) {
+    resend = new resend_1.Resend(resendApiKey);
 }
 else {
-    console.warn("Resend API key is missing. Emails will not be sent.");
+    console.warn("Resend API key is missing from Firebase Functions config. Emails will not be sent. Run 'firebase functions:config:set resend.api_key=\"YOUR_KEY\"'");
 }
 // --- Email Formatting Logic (copied from src/lib/email.ts for standalone function) ---
 function formatRemainingTimeForEmail(expiryDate) {
@@ -112,13 +148,13 @@ const createEmailHtml = (expiringWarranties, expiredWarranties) => {
 // --- Main Cloud Function ---
 // This function will run every day at 9:00 AM.
 exports.dailyreminderemails = (0, scheduler_1.onSchedule)("every day 09:00", async (event) => {
-    var _a, _b, _c;
+    var _a, _b, _c, _d;
     console.log("Starting daily reminder email job.");
-    if (!resend || !process.env.FROM_EMAIL) {
-        console.error("Resend is not configured. Aborting job.");
+    const fromEmail = (_a = functions.config().from) === null || _a === void 0 ? void 0 : _a.email;
+    if (!resend || !fromEmail) {
+        console.error("Resend is not configured correctly in Firebase Functions config. Aborting job.");
         return;
     }
-    const fromEmail = process.env.FROM_EMAIL;
     // Get all warranties that are either expiring in the next 30 days or already expired.
     const now = new Date();
     const expiryLimit = (0, date_fns_1.addDays)(now, 30);
@@ -135,20 +171,10 @@ exports.dailyreminderemails = (0, scheduler_1.onSchedule)("every day 09:00", asy
         const warranty = Object.assign(Object.assign({ id: doc.id }, doc.data()), { purchaseDate: doc.data().purchaseDate.toDate(), expiryDate: doc.data().expiryDate.toDate() });
         const userId = warranty.userId;
         if (!userWarrantiesMap.has(userId)) {
-            // Fetch user's email from the 'users' collection (assuming you have one)
-            // For this example, we'll try to get it from an associated user document.
-            // In a real app, you might store user emails directly or in a separate collection.
-            // This is a placeholder for fetching user details.
-            // Let's assume for now we don't have emails stored and will need to implement that.
-            // For now, we will skip sending email if user doc is not found.
-            // A better approach would be to store user email with the warranty, or have a users collection.
-            // This example will proceed with a conceptual `users` collection.
-            // This part needs to be adapted to how you store user emails.
-            // Let's assume a 'users' collection where the doc ID is the UID.
             try {
                 const userDoc = await db.collection('users').doc(userId).get();
-                if (userDoc.exists && ((_a = userDoc.data()) === null || _a === void 0 ? void 0 : _a.email)) {
-                    userWarrantiesMap.set(userId, { email: (_b = userDoc.data()) === null || _b === void 0 ? void 0 : _b.email, warranties: [] });
+                if (userDoc.exists && ((_b = userDoc.data()) === null || _b === void 0 ? void 0 : _b.email)) {
+                    userWarrantiesMap.set(userId, { email: (_c = userDoc.data()) === null || _c === void 0 ? void 0 : _c.email, warranties: [] });
                 }
                 else {
                     console.warn(`User document or email not found for userId: ${userId}. Skipping.`);
@@ -160,7 +186,7 @@ exports.dailyreminderemails = (0, scheduler_1.onSchedule)("every day 09:00", asy
                 continue;
             }
         }
-        (_c = userWarrantiesMap.get(userId)) === null || _c === void 0 ? void 0 : _c.warranties.push(warranty);
+        (_d = userWarrantiesMap.get(userId)) === null || _d === void 0 ? void 0 : _d.warranties.push(warranty);
     }
     // Process and send emails for each user
     for (const [userId, data] of userWarrantiesMap.entries()) {

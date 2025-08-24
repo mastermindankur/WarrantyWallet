@@ -20,11 +20,14 @@ const db = getFirestore();
 
 // Initialize Resend using Firebase Functions Config
 let resend: Resend | null = null;
-const resendApiKey = functions.config().resend?.api_key;
+const config = functions.config();
+const resendApiKey = config.resend?.api_key;
+const fromEmail = config.from?.email;
+
 if (resendApiKey) {
   resend = new Resend(resendApiKey);
 } else {
-  console.warn("Resend API key is missing from Firebase Functions config. Emails will not be sent. Run 'firebase functions:config:set resend.api_key=\"YOUR_KEY\"'");
+  console.warn("Resend API key is missing. Run 'firebase functions:config:set resend.api_key=\"YOUR_KEY\"'");
 }
 
 // --- Email Formatting Logic (copied from src/lib/email.ts for standalone function) ---
@@ -132,10 +135,11 @@ export const dailyreminderemails = onSchedule(
   "every day 09:00",
   async (event) => {
     console.log("Starting daily reminder email job.");
-    const fromEmail = functions.config().from?.email;
 
     if (!resend || !fromEmail) {
-      console.error("Resend is not configured correctly in Firebase Functions config. Aborting job.");
+      console.error("Aborting job. Resend is not configured correctly. Check your Firebase Functions config.");
+      if (!resend) console.error("Reason: Resend API key is missing or invalid.");
+      if (!fromEmail) console.error("Reason: 'From' email address is not set.");
       return;
     }
 
@@ -210,3 +214,5 @@ export const dailyreminderemails = onSchedule(
     console.log("Daily reminder email job finished.");
   }
 );
+
+    
