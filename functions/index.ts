@@ -1,8 +1,10 @@
-'use server';
 
+'use server';
 /**
  * @fileoverview A "Hello World" function to test deployment and email sending.
  */
+import 'dotenv/config'; // Load environment variables from .env file
+
 import * as functions from 'firebase-functions/v2';
 import * as logger from 'firebase-functions/logger';
 import {Resend} from 'resend';
