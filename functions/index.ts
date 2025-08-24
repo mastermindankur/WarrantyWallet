@@ -84,21 +84,18 @@ export const dailyReminderJob = functions.scheduler.onSchedule('every day 09:00'
         });
 
         // Process emails for each user
+        const testUserEmail = 'mastermindankur@duck.com';
         for (const [userId, warranties] of userWarrantiesMap.entries()) {
             try {
-                const userRecord = await auth.getUser(userId);
-                const userEmail = userRecord.email;
+                // The user's real email is no longer fetched.
+                // We send directly to the test email address.
+                await sendReminderEmail({
+                    userEmail: testUserEmail,
+                    expiringWarranties: warranties.expiring,
+                    expiredWarranties: warranties.expired,
+                });
+                logger.info(`Successfully sent reminder email to test address ${testUserEmail} for user ${userId}`);
 
-                if (userEmail) {
-                    await sendReminderEmail({
-                        userEmail,
-                        expiringWarranties: warranties.expiring,
-                        expiredWarranties: warranties.expired,
-                    });
-                    logger.info(`Successfully sent reminder email to ${userEmail} for user ${userId}`);
-                } else {
-                    logger.warn(`User ${userId} has no email address. Skipping.`);
-                }
             } catch (error) {
                 logger.error(`Failed to process reminders for user ${userId}:`, error);
             }
@@ -223,3 +220,5 @@ async function sendReminderEmail({ userEmail, expiringWarranties, expiredWarrant
         throw new Error("There was an error sending the reminder email.");
     }
 }
+
+    
