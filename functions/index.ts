@@ -23,7 +23,7 @@ let resend: Resend | null = null;
 const config = functions.config();
 const resendApiKey = config.resend?.api_key;
 const fromEmail = config.from?.email;
-const appUrl = config.app?.url ?? 'https://warrantywallet.online'; // Force redeploy
+const appUrl = config.app?.url ?? 'https://warrantywallet.online';
 
 if (resendApiKey) {
   resend = new Resend(resendApiKey);

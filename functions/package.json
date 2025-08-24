@@ -20,7 +20,7 @@
     "predeploy": "npm run build"
   },
   "engines": {
-    "node": "20"
+    "node": "18"
   },
   "private": true
 }
