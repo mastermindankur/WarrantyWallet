@@ -159,7 +159,7 @@ async function sendReminderEmail({ userEmail, expiringWarranties, expiredWarrant
         `;
     };
     try {
-        const { data, error } = await resend.emails.send({
+        const { error } = await resend.emails.send({
             from: fromEmail,
             to: userEmail,
             subject: 'Your Warranty Status Update from WarrantyWallet',
