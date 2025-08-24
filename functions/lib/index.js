@@ -1,4 +1,12 @@
 "use strict";
+/**
+ * This file is not part of the Next.js app. It is a Google Cloud Function.
+ * It must be deployed separately using the Firebase CLI.
+ *
+ * To deploy:
+ * 1. Make sure you have the Firebase CLI installed and are logged in.
+ * 2. Run `npm run deploy:functions` from the project root.
+ */
 var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
     if (k2 === undefined) k2 = k;
     var desc = Object.getOwnPropertyDescriptor(m, k);
@@ -25,14 +33,6 @@ var __importStar = (this && this.__importStar) || function (mod) {
 var _a, _b;
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.dailyReminderJob = void 0;
-/**
- * This file is not part of the Next.js app. It is a Google Cloud Function.
- * It must be deployed separately using the Firebase CLI.
- *
- * To deploy:
- * 1. Make sure you have the Firebase CLI installed and are logged in.
- * 2. Run `npm run deploy:functions` from the project root.
- */
 const app_1 = require("firebase-admin/app");
 const functions = __importStar(require("firebase-functions"));
 const scheduler_1 = require("firebase-functions/v2/scheduler");
@@ -75,4 +75,3 @@ exports.dailyReminderJob = (0, scheduler_1.onSchedule)("every day 09:00", async 
     }
     console.log("'Hello World' email job finished.");
 });
-//# sourceMappingURL=index.js.map
