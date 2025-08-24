@@ -135,9 +135,9 @@ function formatRemainingTimeForEmail(expiryDate: Date): string {
     : intervalToDuration({ start: now, end: expiryDate });
 
   const parts = [];
-  if (duration.years && duration.years > 0) parts.push(`${duration.years}y`);
-  if (duration.months && duration.months > 0) parts.push(`${duration.months}m`);
-  if (duration.days && duration.days > 0) parts.push(`${duration.days}d`);
+  if (duration.years && duration.years > 0) parts.push(`${duration.years} year${duration.years > 1 ? 's' : ''}`);
+  if (duration.months && duration.months > 0) parts.push(`${duration.months} month${duration.months > 1 ? 's' : ''}`);
+  if (duration.days && duration.days > 0) parts.push(`${duration.days} day${duration.days > 1 ? 's' : ''}`);
 
   if (parts.length === 0) {
     return hasExpired ? 'Expired today' : 'Expires today';
@@ -145,7 +145,7 @@ function formatRemainingTimeForEmail(expiryDate: Date): string {
 
   const formattedDuration = parts.slice(0, 2).join(', ');
   
-  return hasExpired ? `Expired ${formattedDuration} ago` : `in ${formattedDuration}`;
+  return hasExpired ? `Expired ${formattedDuration} ago` : `Expires in ${formattedDuration}`;
 }
 
 async function sendReminderEmail({ userEmail, upcomingWarranties, expiredWarranties }: SendReminderEmailParams) {
@@ -201,7 +201,7 @@ async function sendReminderEmail({ userEmail, upcomingWarranties, expiredWarrant
         .warranty-item:last-child { border-bottom: none; }
         .product-name { font-weight: 600; color: #333; font-size: 16px; margin-bottom: 4px; }
         .expiry-detail { font-size: 14px; color: #555; }
-        .expiry-date { display: inline-block; margin-right: 8px; }
+        .expiry-date { display: block; margin-bottom: 4px; }
         .expiry-status { font-weight: 500; color: #333; }
         .button-container { text-align: center; margin: 24px 0; }
         .button { background-color: #FFD700; color: #0a0a0a; padding: 14px 28px; text-decoration: none; border-radius: 6px; font-weight: 600; display: inline-block; }
@@ -234,3 +234,5 @@ async function sendReminderEmail({ userEmail, upcomingWarranties, expiredWarrant
         throw new Error("There was an error sending the reminder email.");
     }
 }
+
+    

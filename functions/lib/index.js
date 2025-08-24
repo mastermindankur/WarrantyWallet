@@ -17,13 +17,23 @@ var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (
 }) : function(o, v) {
     o["default"] = v;
 });
-var __importStar = (this && this.__importStar) || (function (mod) {
-    if (mod && mod.__esModule) return mod;
-    var result = {};
-    if (mod != null) for (var k in mod) if (k !== "default" && Object.prototype.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
-    __setModuleDefault(result, mod);
-    return result;
-};
+var __importStar = (this && this.__importStar) || (function () {
+    var ownKeys = function(o) {
+        ownKeys = Object.getOwnPropertyNames || function (o) {
+            var ar = [];
+            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
+            return ar;
+        };
+        return ownKeys(o);
+    };
+    return function (mod) {
+        if (mod && mod.__esModule) return mod;
+        var result = {};
+        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
+        __setModuleDefault(result, mod);
+        return result;
+    };
+})();
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.dailyReminderJob = void 0;
 /**
@@ -82,12 +92,7 @@ exports.dailyReminderJob = functions.scheduler.onSchedule('every day 09:00', asy
         const processSnapshot = (snapshot, type) => {
             snapshot.docs.forEach((doc) => {
                 const data = doc.data();
-                const warranty = {
-                    ...data,
-                    id: doc.id,
-                    purchaseDate: data.purchaseDate.toDate(),
-                    expiryDate: data.expiryDate.toDate(),
-                };
+                const warranty = Object.assign(Object.assign({}, data), { id: doc.id, purchaseDate: data.purchaseDate.toDate(), expiryDate: data.expiryDate.toDate() });
                 const userId = warranty.userId;
                 if (!userWarrantiesMap.has(userId)) {
                     userWarrantiesMap.set(userId, { upcoming: [], expired: [] });
@@ -134,16 +139,16 @@ function formatRemainingTimeForEmail(expiryDate) {
         : (0, date_fns_1.intervalToDuration)({ start: now, end: expiryDate });
     const parts = [];
     if (duration.years && duration.years > 0)
-        parts.push(`${duration.years}y`);
+        parts.push(`${duration.years} year${duration.years > 1 ? 's' : ''}`);
     if (duration.months && duration.months > 0)
-        parts.push(`${duration.months}m`);
+        parts.push(`${duration.months} month${duration.months > 1 ? 's' : ''}`);
     if (duration.days && duration.days > 0)
-        parts.push(`${duration.days}d`);
+        parts.push(`${duration.days} day${duration.days > 1 ? 's' : ''}`);
     if (parts.length === 0) {
         return hasExpired ? 'Expired today' : 'Expires today';
     }
     const formattedDuration = parts.slice(0, 2).join(', ');
-    return hasExpired ? `Expired ${formattedDuration} ago` : `in ${formattedDuration}`;
+    return hasExpired ? `Expired ${formattedDuration} ago` : `Expires in ${formattedDuration}`;
 }
 async function sendReminderEmail({ userEmail, upcomingWarranties, expiredWarranties }) {
     if (!resend || !fromEmail) {
@@ -194,7 +199,7 @@ async function sendReminderEmail({ userEmail, upcomingWarranties, expiredWarrant
         .warranty-item:last-child { border-bottom: none; }
         .product-name { font-weight: 600; color: #333; font-size: 16px; margin-bottom: 4px; }
         .expiry-detail { font-size: 14px; color: #555; }
-        .expiry-date { display: inline-block; margin-right: 8px; }
+        .expiry-date { display: block; margin-bottom: 4px; }
         .expiry-status { font-weight: 500; color: #333; }
         .button-container { text-align: center; margin: 24px 0; }
         .button { background-color: #FFD700; color: #0a0a0a; padding: 14px 28px; text-decoration: none; border-radius: 6px; font-weight: 600; display: inline-block; }
@@ -228,3 +233,5 @@ async function sendReminderEmail({ userEmail, upcomingWarranties, expiredWarrant
     }
 }
 //# sourceMappingURL=index.js.map
+
+    
