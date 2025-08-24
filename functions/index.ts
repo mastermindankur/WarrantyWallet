@@ -8,6 +8,7 @@
  */
 import { initializeApp } from "firebase-admin/app";
 import { getFirestore } from "firebase-admin/firestore";
+import * as functions from 'firebase-functions';
 import { onSchedule } from "firebase-functions/v2/scheduler";
 import { Resend } from "resend";
 import { format, isPast, intervalToDuration, addDays } from "date-fns";
@@ -17,12 +18,13 @@ import type { Warranty } from "./types";
 initializeApp();
 const db = getFirestore();
 
-// Initialize Resend
+// Initialize Resend using Firebase Functions Config
 let resend: Resend | null = null;
-if (process.env.RESEND_API_KEY) {
-  resend = new Resend(process.env.RESEND_API_KEY);
+const resendApiKey = functions.config().resend?.api_key;
+if (resendApiKey) {
+  resend = new Resend(resendApiKey);
 } else {
-  console.warn("Resend API key is missing. Emails will not be sent.");
+  console.warn("Resend API key is missing from Firebase Functions config. Emails will not be sent. Run 'firebase functions:config:set resend.api_key=\"YOUR_KEY\"'");
 }
 
 // --- Email Formatting Logic (copied from src/lib/email.ts for standalone function) ---
@@ -130,13 +132,12 @@ export const dailyreminderemails = onSchedule(
   "every day 09:00",
   async (event) => {
     console.log("Starting daily reminder email job.");
+    const fromEmail = functions.config().from?.email;
 
-    if (!resend || !process.env.FROM_EMAIL) {
-      console.error("Resend is not configured. Aborting job.");
+    if (!resend || !fromEmail) {
+      console.error("Resend is not configured correctly in Firebase Functions config. Aborting job.");
       return;
     }
-
-    const fromEmail = process.env.FROM_EMAIL;
 
     // Get all warranties that are either expiring in the next 30 days or already expired.
     const now = new Date();
@@ -165,17 +166,6 @@ export const dailyreminderemails = onSchedule(
       const userId = warranty.userId;
 
       if (!userWarrantiesMap.has(userId)) {
-        // Fetch user's email from the 'users' collection (assuming you have one)
-        // For this example, we'll try to get it from an associated user document.
-        // In a real app, you might store user emails directly or in a separate collection.
-        // This is a placeholder for fetching user details.
-        // Let's assume for now we don't have emails stored and will need to implement that.
-        // For now, we will skip sending email if user doc is not found.
-        // A better approach would be to store user email with the warranty, or have a users collection.
-        // This example will proceed with a conceptual `users` collection.
-        
-        // This part needs to be adapted to how you store user emails.
-        // Let's assume a 'users' collection where the doc ID is the UID.
         try {
             const userDoc = await db.collection('users').doc(userId).get();
             if (userDoc.exists && userDoc.data()?.email) {
@@ -220,5 +210,3 @@ export const dailyreminderemails = onSchedule(
     console.log("Daily reminder email job finished.");
   }
 );
-
-    
