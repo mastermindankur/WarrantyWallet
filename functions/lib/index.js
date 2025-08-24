@@ -17,23 +17,13 @@ var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (
 }) : function(o, v) {
     o["default"] = v;
 });
-var __importStar = (this && this.__importStar) || (function () {
-    var ownKeys = function(o) {
-        ownKeys = Object.getOwnPropertyNames || function (o) {
-            var ar = [];
-            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
-            return ar;
-        };
-        return ownKeys(o);
-    };
-    return function (mod) {
-        if (mod && mod.__esModule) return mod;
-        var result = {};
-        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
-        __setModuleDefault(result, mod);
-        return result;
-    };
-})();
+var __importStar = (this && this.__importStar) || function (mod) {
+    if (mod && mod.__esModule) return mod;
+    var result = {};
+    if (mod != null) for (var k in mod) if (k !== "default" && Object.prototype.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
+    __setModuleDefault(result, mod);
+    return result;
+};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.dailyReminderJob = void 0;
 /**
@@ -45,12 +35,14 @@ const logger = __importStar(require("firebase-functions/logger"));
 const resend_1 = require("resend");
 const app_1 = require("firebase-admin/app");
 const firestore_1 = require("firebase-admin/firestore");
+const auth_1 = require("firebase-admin/auth");
 const date_fns_1 = require("date-fns");
 // Initialize Firebase Admin SDK
 if ((0, app_1.getApps)().length === 0) {
     (0, app_1.initializeApp)();
 }
 const db = (0, firestore_1.getFirestore)();
+const auth = (0, auth_1.getAuth)();
 // Initialize Resend client
 const resendApiKey = process.env.RESEND_API_KEY;
 const fromEmail = process.env.FROM_EMAIL;
@@ -64,7 +56,8 @@ else {
 }
 /**
  * A scheduled function that runs daily, finds users with warranties,
- * and sends them a summary email.
+ * and sends them a summary email. It also sends a reminder to users
+ * who have not yet added any warranties.
  */
 exports.dailyReminderJob = functions.scheduler.onSchedule('every day 09:00', async (event) => {
     logger.info("Daily reminder job started.");
@@ -75,24 +68,24 @@ exports.dailyReminderJob = functions.scheduler.onSchedule('every day 09:00', asy
     try {
         const now = new Date();
         const nowTimestamp = firestore_1.Timestamp.fromDate(now);
-        // 1. Fetch all warranties that have not yet expired.
+        // 1. Fetch all warranties
         const upcomingSnapshot = await db.collection('warranties')
             .where('expiryDate', '>=', nowTimestamp)
             .get();
-        // 2. Fetch all warranties that are already expired.
         const expiredSnapshot = await db.collection('warranties')
             .where('expiryDate', '<', nowTimestamp)
             .get();
-        if (upcomingSnapshot.empty && expiredSnapshot.empty) {
-            logger.info("No warranties found. Job finished.");
-            return;
-        }
-        // Group warranties by userId
+        // 2. Group warranties by userId
         const userWarrantiesMap = new Map();
         const processSnapshot = (snapshot, type) => {
             snapshot.docs.forEach((doc) => {
                 const data = doc.data();
-                const warranty = Object.assign(Object.assign({}, data), { id: doc.id, purchaseDate: data.purchaseDate.toDate(), expiryDate: data.expiryDate.toDate() });
+                const warranty = {
+                    ...data,
+                    id: doc.id,
+                    purchaseDate: data.purchaseDate.toDate(),
+                    expiryDate: data.expiryDate.toDate(),
+                };
                 const userId = warranty.userId;
                 if (!userWarrantiesMap.has(userId)) {
                     userWarrantiesMap.set(userId, { upcoming: [], expired: [] });
@@ -108,13 +101,16 @@ exports.dailyReminderJob = functions.scheduler.onSchedule('every day 09:00', asy
         };
         processSnapshot(upcomingSnapshot, 'upcoming');
         processSnapshot(expiredSnapshot, 'expired');
-        // Process emails for each user
+        // 3. Process emails for users with warranties
         const testUserEmail = 'mastermindankur@duck.com';
         for (const [userId, warranties] of userWarrantiesMap.entries()) {
             if (warranties.upcoming.length === 0 && warranties.expired.length === 0) {
                 continue;
             }
             try {
+                // In a real app, you would fetch the user's real email.
+                // const userRecord = await auth.getUser(userId);
+                // const userEmail = userRecord.email;
                 await sendReminderEmail({
                     userEmail: testUserEmail,
                     upcomingWarranties: warranties.upcoming,
@@ -124,6 +120,20 @@ exports.dailyReminderJob = functions.scheduler.onSchedule('every day 09:00', asy
             }
             catch (error) {
                 logger.error(`Failed to process reminders for user ${userId}:`, error);
+            }
+        }
+        // 4. Process engagement emails for users without warranties
+        const allUsers = await auth.listUsers();
+        for (const user of allUsers.users) {
+            if (!userWarrantiesMap.has(user.uid)) {
+                try {
+                    // Send to the test email for now
+                    await sendEngagementEmail({ userEmail: testUserEmail });
+                    logger.info(`Successfully sent engagement email to test address ${testUserEmail} for user ${user.uid}`);
+                }
+                catch (error) {
+                    logger.error(`Failed to send engagement email for user ${user.uid}:`, error);
+                }
             }
         }
     }
@@ -158,7 +168,7 @@ async function sendReminderEmail({ userEmail, upcomingWarranties, expiredWarrant
     const renderWarrantySection = (title, warranties, color) => {
         if (warranties.length === 0)
             return '';
-        // Sort warranties by expiry date: ascending for future, descending for expired
+        // Sort warranties by expiry date
         warranties.sort((a, b) => a.expiryDate.getTime() - b.expiryDate.getTime());
         return `
             <h3 style="color: ${color}; font-size: 18px; margin-top: 20px; border-bottom: 2px solid #e0e0e0; padding-bottom: 5px;">${title}</h3>
@@ -167,8 +177,8 @@ async function sendReminderEmail({ userEmail, upcomingWarranties, expiredWarrant
                     <div class="warranty-item">
                         <div class="product-name">${w.productName}</div>
                         <div class="expiry-detail">
-                            <span class="expiry-date">Expires: ${(0, date_fns_1.format)(w.expiryDate, 'MMM d, yyyy')}</span>
-                            <span class="expiry-status">(${formatRemainingTimeForEmail(w.expiryDate)})</span>
+                            <div class="expiry-date">Expires: ${(0, date_fns_1.format)(w.expiryDate, 'MMM d, yyyy')}</div>
+                            <div class="expiry-status">(${formatRemainingTimeForEmail(w.expiryDate)})</div>
                         </div>
                     </div>
                 `).join('')}
@@ -230,6 +240,60 @@ async function sendReminderEmail({ userEmail, upcomingWarranties, expiredWarrant
     catch (error) {
         logger.error("Failed to send email via Resend:", error);
         throw new Error("There was an error sending the reminder email.");
+    }
+}
+async function sendEngagementEmail({ userEmail }) {
+    if (!resend || !fromEmail) {
+        throw new Error("Email provider (Resend) is not configured.");
+    }
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://warrantywallet.online';
+    try {
+        const { error } = await resend.emails.send({
+            from: fromEmail,
+            to: userEmail,
+            subject: 'Get Started with WarrantyWallet!',
+            html: `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Get Started with WarrantyWallet</title>
+    <style>
+        body { margin: 0; padding: 0; background-color: #F0F0F0; font-family: 'Inter', sans-serif, Arial; color: #0a0a0a; }
+        .container { max-width: 600px; margin: 20px auto; background-color: #ffffff; border-radius: 8px; overflow: hidden; border: 1px solid #e0e0e0; }
+        .header { background-color: #008080; color: #ffffff; padding: 24px; text-align: center; }
+        .header h1 { margin: 0; font-size: 24px; font-weight: 700; }
+        .content { padding: 24px; }
+        .content p { font-size: 16px; line-height: 1.5; margin: 0 0 16px; }
+        .button-container { text-align: center; margin: 24px 0; }
+        .button { background-color: #FFD700; color: #0a0a0a; padding: 14px 28px; text-decoration: none; border-radius: 6px; font-weight: 600; display: inline-block; }
+        .footer { padding: 24px; text-align: center; font-size: 12px; color: #7f7f7f; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header"><h1>WarrantyWallet</h1></div>
+        <div class="content">
+            <p>Hi there,</p>
+            <p>We noticed you haven't added any warranties to your wallet yet. Don't let your receipts pile up!</p>
+            <p>WarrantyWallet makes it easy to store, organize, and get reminders for all your product warranties. Let our AI do the hard work for you.</p>
+            <div class="button-container"><a href="${appUrl}/dashboard" class="button">Add Your First Warranty</a></div>
+            <p>It only takes a minute to get started and gain peace of mind.</p>
+        </div>
+        <div class="footer"><p>&copy; ${new Date().getFullYear()} WarrantyWallet. All rights reserved.</p></div>
+    </div>
+</body>
+</html>`,
+        });
+        if (error) {
+            logger.error("Error response from Resend:", JSON.stringify(error, null, 2));
+            throw new Error(`Resend failed to send email. Details: ${JSON.stringify(error)}`);
+        }
+    }
+    catch (error) {
+        logger.error("Failed to send engagement email via Resend:", error);
+        throw new Error("There was an error sending the engagement email.");
     }
 }
 //# sourceMappingURL=index.js.map
