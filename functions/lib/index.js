@@ -32,7 +32,7 @@ var __importStar = (this && this.__importStar) || (function () {
         return result;
     };
 })();
-var _a;
+var _a, _b;
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.dailyreminderemails = void 0;
 /**
@@ -54,12 +54,14 @@ const date_fns_1 = require("date-fns");
 const db = (0, firestore_1.getFirestore)();
 // Initialize Resend using Firebase Functions Config
 let resend = null;
-const resendApiKey = (_a = functions.config().resend) === null || _a === void 0 ? void 0 : _a.api_key;
+const config = functions.config();
+const resendApiKey = (_a = config.resend) === null || _a === void 0 ? void 0 : _a.api_key;
+const fromEmail = (_b = config.from) === null || _b === void 0 ? void 0 : _b.email;
 if (resendApiKey) {
     resend = new resend_1.Resend(resendApiKey);
 }
 else {
-    console.warn("Resend API key is missing from Firebase Functions config. Emails will not be sent. Run 'firebase functions:config:set resend.api_key=\"YOUR_KEY\"'");
+    console.warn("Resend API key is missing. Run 'firebase functions:config:set resend.api_key=\"YOUR_KEY\"'");
 }
 // --- Email Formatting Logic (copied from src/lib/email.ts for standalone function) ---
 function formatRemainingTimeForEmail(expiryDate) {
@@ -148,11 +150,14 @@ const createEmailHtml = (expiringWarranties, expiredWarranties) => {
 // --- Main Cloud Function ---
 // This function will run every day at 9:00 AM.
 exports.dailyreminderemails = (0, scheduler_1.onSchedule)("every day 09:00", async (event) => {
-    var _a, _b, _c, _d;
+    var _a, _b, _c;
     console.log("Starting daily reminder email job.");
-    const fromEmail = (_a = functions.config().from) === null || _a === void 0 ? void 0 : _a.email;
     if (!resend || !fromEmail) {
-        console.error("Resend is not configured correctly in Firebase Functions config. Aborting job.");
+        console.error("Aborting job. Resend is not configured correctly. Check your Firebase Functions config.");
+        if (!resend)
+            console.error("Reason: Resend API key is missing or invalid.");
+        if (!fromEmail)
+            console.error("Reason: 'From' email address is not set.");
         return;
     }
     // Get all warranties that are either expiring in the next 30 days or already expired.
@@ -173,8 +178,8 @@ exports.dailyreminderemails = (0, scheduler_1.onSchedule)("every day 09:00", asy
         if (!userWarrantiesMap.has(userId)) {
             try {
                 const userDoc = await db.collection('users').doc(userId).get();
-                if (userDoc.exists && ((_b = userDoc.data()) === null || _b === void 0 ? void 0 : _b.email)) {
-                    userWarrantiesMap.set(userId, { email: (_c = userDoc.data()) === null || _c === void 0 ? void 0 : _c.email, warranties: [] });
+                if (userDoc.exists && ((_a = userDoc.data()) === null || _a === void 0 ? void 0 : _a.email)) {
+                    userWarrantiesMap.set(userId, { email: (_b = userDoc.data()) === null || _b === void 0 ? void 0 : _b.email, warranties: [] });
                 }
                 else {
                     console.warn(`User document or email not found for userId: ${userId}. Skipping.`);
@@ -186,7 +191,7 @@ exports.dailyreminderemails = (0, scheduler_1.onSchedule)("every day 09:00", asy
                 continue;
             }
         }
-        (_d = userWarrantiesMap.get(userId)) === null || _d === void 0 ? void 0 : _d.warranties.push(warranty);
+        (_c = userWarrantiesMap.get(userId)) === null || _c === void 0 ? void 0 : _c.warranties.push(warranty);
     }
     // Process and send emails for each user
     for (const [userId, data] of userWarrantiesMap.entries()) {

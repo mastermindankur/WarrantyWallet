@@ -4,7 +4,7 @@
  *
  * To deploy:
  * 1. Make sure you have the Firebase CLI installed and are logged in.
- * 2. Run `firebase deploy --only functions` from the project root.
+ * 2. Run `npm run deploy:functions` from the project root.
  */
 import { initializeApp } from "firebase-admin/app";
 import { getFirestore } from "firebase-admin/firestore";
@@ -18,16 +18,19 @@ import type { Warranty } from "./types";
 initializeApp();
 const db = getFirestore();
 
-// Initialize Resend using Firebase Functions Config
+// Initialize Resend using environment variables
 let resend: Resend | null = null;
-const config = functions.config();
-const resendApiKey = config.resend?.api_key;
-const fromEmail = config.from?.email;
+const resendApiKey = process.env.RESEND_API_KEY;
+const fromEmail = process.env.FROM_EMAIL;
 
 if (resendApiKey) {
   resend = new Resend(resendApiKey);
 } else {
-  console.warn("Resend API key is missing. Run 'firebase functions:config:set resend.api_key=\"YOUR_KEY\"'");
+  console.warn("RESEND_API_KEY is not set in the function's environment.");
+}
+
+if (!fromEmail) {
+    console.warn("FROM_EMAIL is not set in the function's environment.");
 }
 
 // --- Email Formatting Logic (copied from src/lib/email.ts for standalone function) ---
@@ -135,11 +138,11 @@ export const dailyreminderemails = onSchedule(
   "every day 09:00",
   async (event) => {
     console.log("Starting daily reminder email job.");
+    console.log(`RESEND_API_KEY is ${resendApiKey ? 'set.' : 'NOT SET.'}`);
+    console.log(`FROM_EMAIL is ${fromEmail ? 'set.' : 'NOT SET.'}`);
 
     if (!resend || !fromEmail) {
-      console.error("Aborting job. Resend is not configured correctly. Check your Firebase Functions config.");
-      if (!resend) console.error("Reason: Resend API key is missing or invalid.");
-      if (!fromEmail) console.error("Reason: 'From' email address is not set.");
+      console.error("Aborting job. Resend is not configured correctly. Check the function's environment variables.");
       return;
     }
 
@@ -190,7 +193,7 @@ export const dailyreminderemails = onSchedule(
     
     // Process and send emails for each user
     for (const [userId, data] of userWarrantiesMap.entries()) {
-        const { email, warranties } = data;
+        const { email, warranties } = data.
         const expiringWarranties = warranties.filter(w => !isPast(w.expiryDate));
         const expiredWarranties = warranties.filter(w => isPast(w.expiryDate));
 
