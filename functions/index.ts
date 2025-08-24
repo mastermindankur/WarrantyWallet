@@ -18,22 +18,23 @@ import type { Warranty } from "./types";
 initializeApp();
 const db = getFirestore();
 
-// Initialize Resend using environment variables
+// Initialize Resend using Firebase Functions Config
 let resend: Resend | null = null;
-const resendApiKey = process.env.RESEND_API_KEY;
-const fromEmail = process.env.FROM_EMAIL;
+const config = functions.config();
+const resendApiKey = config.resend?.api_key;
+const fromEmail = config.from?.email;
 
 if (resendApiKey) {
   resend = new Resend(resendApiKey);
 } else {
-  console.warn("RESEND_API_KEY is not set in the function's environment.");
+  console.warn("Resend API key is missing. Run 'firebase functions:config:set resend.api_key=\"YOUR_KEY\"' and redeploy.");
 }
 
 if (!fromEmail) {
-    console.warn("FROM_EMAIL is not set in the function's environment.");
+    console.warn("From email is missing. Run 'firebase functions:config:set from.email=\"YOUR_EMAIL\"' and redeploy.");
 }
 
-// --- Email Formatting Logic (copied from src/lib/email.ts for standalone function) ---
+// --- Email Formatting Logic ---
 function formatRemainingTimeForEmail(expiryDate: Date): string {
   const now = new Date();
   const hasExpired = isPast(expiryDate);
@@ -87,7 +88,7 @@ const createEmailHtml = (
   expiringWarranties: Warranty[],
   expiredWarranties: Warranty[]
 ) => {
-    const dashboardUrl = process.env.NEXT_PUBLIC_APP_URL ? `${process.env.NEXT_PUBLIC_APP_URL}/dashboard` : 'https://warrantywallet.online/dashboard';
+    const dashboardUrl = config.app?.url ? `${config.app.url}/dashboard` : 'https://warrantywallet.online/dashboard';
 
     return `
 <!DOCTYPE html>
@@ -133,20 +134,18 @@ const createEmailHtml = (
 };
 
 // --- Main Cloud Function ---
-// This function will run every day at 9:00 AM.
 export const dailyreminderemails = onSchedule(
   "every day 09:00",
   async (event) => {
     console.log("Starting daily reminder email job.");
-    console.log(`RESEND_API_KEY is ${resendApiKey ? 'set.' : 'NOT SET.'}`);
-    console.log(`FROM_EMAIL is ${fromEmail ? 'set.' : 'NOT SET.'}`);
+    console.log(`Resend API key is ${resendApiKey ? 'set.' : 'NOT SET.'}`);
+    console.log(`From email is ${fromEmail ? 'set.' : 'NOT SET.'}`);
 
     if (!resend || !fromEmail) {
-      console.error("Aborting job. Resend is not configured correctly. Check the function's environment variables.");
+      console.error("Aborting job. Resend is not configured correctly. Check your Firebase Functions config by running 'firebase functions:config:get'");
       return;
     }
 
-    // Get all warranties that are either expiring in the next 30 days or already expired.
     const now = new Date();
     const expiryLimit = addDays(now, 30);
 
@@ -159,7 +158,6 @@ export const dailyreminderemails = onSchedule(
         return;
     }
 
-    // Group warranties by user
     const userWarrantiesMap = new Map<string, { email: string, warranties: Warranty[] }>();
 
     for (const doc of warrantiesSnapshot.docs) {
@@ -185,20 +183,18 @@ export const dailyreminderemails = onSchedule(
             console.error(`Could not fetch user data for ${userId}`, e);
             continue;
         }
-
       }
       
       userWarrantiesMap.get(userId)?.warranties.push(warranty);
     }
     
-    // Process and send emails for each user
     for (const [userId, data] of userWarrantiesMap.entries()) {
-        const { email, warranties } = data.
+        const { email, warranties } = data;
         const expiringWarranties = warranties.filter(w => !isPast(w.expiryDate));
         const expiredWarranties = warranties.filter(w => isPast(w.expiryDate));
 
         if (expiringWarranties.length === 0 && expiredWarranties.length === 0) {
-            continue; // Skip if no relevant warranties for this user
+            continue;
         }
 
         try {
@@ -217,5 +213,3 @@ export const dailyreminderemails = onSchedule(
     console.log("Daily reminder email job finished.");
   }
 );
-
-    
