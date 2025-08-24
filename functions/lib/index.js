@@ -1,4 +1,3 @@
-
 "use strict";
 'use server';
 var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
@@ -218,7 +217,7 @@ async function sendReminderEmail({ userEmail, upcomingWarranties, expiredWarrant
     };
     try {
         const { error } = await resend.emails.send({
-            from: fromEmail,
+            from: `WarrantyWallet <${fromEmail}>`,
             to: userEmail,
             subject: 'Your Warranty Status Update from WarrantyWallet',
             html: `
@@ -280,7 +279,7 @@ async function sendEngagementEmail({ userEmail }) {
     const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://warrantywallet.online';
     try {
         const { error } = await resend.emails.send({
-            from: fromEmail,
+            from: `WarrantyWallet <${fromEmail}>`,
             to: userEmail,
             subject: 'Get Started with WarrantyWallet!',
             html: `
