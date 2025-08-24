@@ -20,4 +20,16 @@ export interface Warranty {
   notes?: string;
 }
 
+// Firestore data will have Timestamps
+export interface WarrantyFromFirestore {
+    id: string;
+    userId: string;
+    productName: string;
+    category: WarrantyCategory;
+    purchaseDate: { toDate: () => Date };
+    expiryDate: { toDate: () => Date };
+    invoiceKey?: string;
+    warrantyCardKey?: string;
+    notes?: string;
+}
     

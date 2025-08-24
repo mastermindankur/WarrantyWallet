@@ -38,6 +38,7 @@ exports.dailyReminderJob = void 0;
 /**
  * @fileoverview A "Hello World" function to test deployment and email sending.
  */
+require("dotenv/config"); // Load environment variables from .env file
 const functions = __importStar(require("firebase-functions/v2"));
 const logger = __importStar(require("firebase-functions/logger"));
 const resend_1 = require("resend");
