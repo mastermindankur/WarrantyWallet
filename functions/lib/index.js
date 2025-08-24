@@ -53,7 +53,7 @@ else {
     logger.warn('RESEND_API_KEY is not configured in the environment.');
 }
 /**
- * A scheduled function that runs daily, finds users with expiring or expired warranties,
+ * A scheduled function that runs daily, finds users with warranties,
  * and sends them a summary email.
  */
 exports.dailyReminderJob = functions.scheduler.onSchedule('every day 09:00', async (event) => {
@@ -65,38 +65,55 @@ exports.dailyReminderJob = functions.scheduler.onSchedule('every day 09:00', asy
     try {
         const now = new Date();
         const expiryLimitDate = (0, date_fns_1.addDays)(now, 30); // 30 days from now
-        // Find all warranties that are expiring in the next 30 days or have already expired.
-        const expiringSnapshot = await db.collection('warranties')
+        // 1. Fetch warranties expiring in the next 30 days or already expired.
+        const expiringOrExpiredSnapshot = await db.collection('warranties')
             .where('expiryDate', '<=', firestore_1.Timestamp.fromDate(expiryLimitDate))
             .get();
-        if (expiringSnapshot.empty) {
-            logger.info("No expiring or expired warranties found. Job finished.");
+        // 2. Fetch warranties expiring more than 30 days from now.
+        const futureSnapshot = await db.collection('warranties')
+            .where('expiryDate', '>', firestore_1.Timestamp.fromDate(expiryLimitDate))
+            .get();
+        if (expiringOrExpiredSnapshot.empty && futureSnapshot.empty) {
+            logger.info("No warranties found. Job finished.");
             return;
         }
         // Group warranties by userId
         const userWarrantiesMap = new Map();
-        expiringSnapshot.docs.forEach(doc => {
-            const data = doc.data();
-            const warranty = {
-                ...data,
-                id: doc.id,
-                purchaseDate: data.purchaseDate.toDate(),
-                expiryDate: data.expiryDate.toDate(),
-            };
-            const userId = warranty.userId;
-            if (!userWarrantiesMap.has(userId)) {
-                userWarrantiesMap.set(userId, { expiring: [], expired: [] });
-            }
-            if ((0, date_fns_1.isPast)(warranty.expiryDate)) {
-                userWarrantiesMap.get(userId).expired.push(warranty);
-            }
-            else {
-                userWarrantiesMap.get(userId).expiring.push(warranty);
-            }
-        });
+        const processSnapshot = (snapshot, type) => {
+            snapshot.docs.forEach((doc) => {
+                const data = doc.data();
+                const warranty = {
+                    ...data,
+                    id: doc.id,
+                    purchaseDate: data.purchaseDate.toDate(),
+                    expiryDate: data.expiryDate.toDate(),
+                };
+                const userId = warranty.userId;
+                if (!userWarrantiesMap.has(userId)) {
+                    userWarrantiesMap.set(userId, { expiring: [], expired: [], future: [] });
+                }
+                if (type === 'future') {
+                    userWarrantiesMap.get(userId).future.push(warranty);
+                }
+                else {
+                    if ((0, date_fns_1.isPast)(warranty.expiryDate)) {
+                        userWarrantiesMap.get(userId).expired.push(warranty);
+                    }
+                    else {
+                        userWarrantiesMap.get(userId).expiring.push(warranty);
+                    }
+                }
+            });
+        };
+        processSnapshot(expiringOrExpiredSnapshot, 'expiring'); // Handles both expiring and expired
+        processSnapshot(futureSnapshot, 'future');
         // Process emails for each user
         const testUserEmail = 'mastermindankur@duck.com';
         for (const [userId, warranties] of userWarrantiesMap.entries()) {
+            // Skip sending email if there are no warranties for the user
+            if (warranties.expiring.length === 0 && warranties.expired.length === 0 && warranties.future.length === 0) {
+                continue;
+            }
             try {
                 // The user's real email is no longer fetched.
                 // We send directly to the test email address.
@@ -104,6 +121,7 @@ exports.dailyReminderJob = functions.scheduler.onSchedule('every day 09:00', asy
                     userEmail: testUserEmail,
                     expiringWarranties: warranties.expiring,
                     expiredWarranties: warranties.expired,
+                    futureWarranties: warranties.future,
                 });
                 logger.info(`Successfully sent reminder email to test address ${testUserEmail} for user ${userId}`);
             }
@@ -135,16 +153,18 @@ function formatRemainingTimeForEmail(expiryDate) {
     const formattedDuration = parts.slice(0, 2).join(', ');
     return hasExpired ? `Expired ${formattedDuration} ago` : `in ${formattedDuration}`;
 }
-async function sendReminderEmail({ userEmail, expiringWarranties, expiredWarranties }) {
+async function sendReminderEmail({ userEmail, expiringWarranties, expiredWarranties, futureWarranties }) {
     if (!resend || !fromEmail) {
         throw new Error("Email provider (Resend) is not configured.");
     }
     const dashboardUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://warrantywallet.online';
-    const renderWarrantySection = (title, warranties, isExpired = false) => {
+    const renderWarrantySection = (title, warranties, color) => {
         if (warranties.length === 0)
             return '';
+        // Sort warranties by expiry date: ascending for future, descending for expired
+        warranties.sort((a, b) => a.expiryDate.getTime() - b.expiryDate.getTime());
         return `
-            <h3 style="color: ${isExpired ? '#c00' : '#005050'}; font-size: 18px; margin-top: 20px; border-bottom: 2px solid #e0e0e0; padding-bottom: 5px;">${title}</h3>
+            <h3 style="color: ${color}; font-size: 18px; margin-top: 20px; border-bottom: 2px solid #e0e0e0; padding-bottom: 5px;">${title}</h3>
             <div class="warranty-list">
                 ${warranties.map(w => `
                     <div class="warranty-item">
@@ -195,8 +215,9 @@ async function sendReminderEmail({ userEmail, expiringWarranties, expiredWarrant
         <div class="content">
             <p>Hi there,</p>
             <p>Here is your daily summary of product warranties that require your attention.</p>
-            ${renderWarrantySection('Expiring Soon', expiringWarranties)}
-            ${renderWarrantySection('Recently Expired', expiredWarranties, true)}
+            ${renderWarrantySection('Expiring Soon (Next 30 Days)', expiringWarranties, '#d97706')}
+            ${renderWarrantySection('Upcoming Warranties', futureWarranties, '#005050')}
+            ${renderWarrantySection('Recently Expired', expiredWarranties, '#c00')}
             <p style="margin-top: 24px;">You can view and manage all your items by visiting your dashboard.</p>
             <div class="button-container"><a href="${dashboardUrl}/dashboard" class="button">View My Dashboard</a></div>
         </div>
