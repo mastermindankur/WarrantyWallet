@@ -3,7 +3,7 @@
 /**
  * @fileoverview A "Hello World" function to test deployment and email sending.
  */
-import * as functions from 'firebase-functions';
+import * as functions from 'firebase-functions/v2';
 import * as logger from 'firebase-functions/logger';
 import {Resend} from 'resend';
 
@@ -11,7 +11,7 @@ import {Resend} from 'resend';
 logger.info('Function cold start: Initializing...');
 
 // For 2nd Gen functions, we use process.env to access environment variables.
-// These are set during deployment.
+// These are set during deployment from the .env file.
 const resendApiKey = process.env.RESEND_API_KEY;
 const fromEmail = process.env.FROM_EMAIL;
 
@@ -22,7 +22,7 @@ if (resendApiKey) {
     logger.warn('RESEND_API_KEY is not configured in the environment.');
 }
 
-export const dailyReminderJob = functions.pubsub.schedule('every day 09:00').onRun(async (context) => {
+export const dailyReminderJob = functions.scheduler.onSchedule('every day 09:00', async (event) => {
     logger.info("Hello from dailyReminderJob! The function triggered successfully.");
 
     if (!resend) {
