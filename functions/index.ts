@@ -18,6 +18,7 @@ const fromEmail = process.env.FROM_EMAIL;
 let resend: Resend | null = null;
 if (resendApiKey) {
     resend = new Resend(resendApiKey);
+    logger.info('Resend client initialized.');
 } else {
     logger.warn('RESEND_API_KEY is not configured in the environment.');
 }
@@ -39,7 +40,8 @@ export const dailyReminderJob = functions.scheduler.onSchedule('every day 09:00'
     const testUserEmail = 'mastermindankur@duck.com'; 
 
     try {
-        await resend.emails.send({
+        logger.info(`Attempting to send email from ${fromEmail} to ${testUserEmail}...`);
+        const { data, error } = await resend.emails.send({
             from: fromEmail,
             to: testUserEmail,
             subject: 'Hello from WarrantyWallet!',
@@ -48,9 +50,15 @@ export const dailyReminderJob = functions.scheduler.onSchedule('every day 09:00'
                 <p>This is a test email from your successfully deployed Cloud Function.</p>
             `,
         });
-        logger.info(`Successfully sent test email to ${testUserEmail}`);
+
+        if (error) {
+            logger.error("Error response from Resend:", error);
+            throw new Error(`Resend failed to send email: ${error.message}`);
+        }
+
+        logger.info(`Successfully sent test email to ${testUserEmail}. Response ID: ${data?.id}`);
     } catch (error) {
-        logger.error("Error sending email:", error);
+        logger.error("Error in email sending block:", error);
     }
     
     return;
