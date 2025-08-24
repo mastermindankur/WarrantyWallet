@@ -10,7 +10,6 @@ import * as logger from 'firebase-functions/logger';
 import { Resend } from 'resend';
 import { initializeApp, getApps } from 'firebase-admin/app';
 import { getFirestore, Timestamp } from 'firebase-admin/firestore';
-import { getAuth } from 'firebase-admin/auth';
 import { format, isPast, intervalToDuration, addDays } from 'date-fns';
 import type { Warranty, WarrantyFromFirestore } from './types';
 
@@ -19,7 +18,6 @@ if (getApps().length === 0) {
   initializeApp();
 }
 const db = getFirestore();
-const auth = getAuth();
 
 // Initialize Resend client
 const resendApiKey = process.env.RESEND_API_KEY;
@@ -220,5 +218,3 @@ async function sendReminderEmail({ userEmail, expiringWarranties, expiredWarrant
         throw new Error("There was an error sending the reminder email.");
     }
 }
-
-    
