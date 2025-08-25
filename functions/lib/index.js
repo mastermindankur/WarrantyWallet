@@ -136,6 +136,8 @@ exports.dailyReminderJob = functions.scheduler.onSchedule('every day 09:00', asy
             catch (error) {
                 logger.error(`Failed to process reminders for user ${userId}:`, error);
             }
+            // Add a delay to avoid hitting email rate limits
+            await new Promise(resolve => setTimeout(resolve, 500));
         }
         // 4. Process engagement emails for users without warranties
         let nextPageToken;
@@ -162,6 +164,8 @@ exports.dailyReminderJob = functions.scheduler.onSchedule('every day 09:00', asy
                     catch (error) {
                         logger.error(`Failed to send engagement email for user ${user.uid}:`, error);
                     }
+                    // Add a delay to avoid hitting email rate limits
+                    await new Promise(resolve => setTimeout(resolve, 500));
                 }
             }
             nextPageToken = listUsersResult.pageToken;
