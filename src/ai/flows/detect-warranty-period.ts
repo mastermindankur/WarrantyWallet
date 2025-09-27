@@ -1,3 +1,4 @@
+
 'use server';
 
 /**
@@ -69,6 +70,7 @@ const detectWarrantyPeriodPrompt = ai.definePrompt({
       IMPORTANT: Dates in the output JSON must be strings in YYYY-MM-DD format.
 
       Also, provide a confidence score (0-1) indicating the reliability of your detection and a brief reasoning for your conclusions, mentioning which document you used.
+      If a value cannot be found, omit it from the JSON output.
       Output in JSON format.
 
       Product Description: {{{productDescription}}}
