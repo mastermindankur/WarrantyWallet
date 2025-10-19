@@ -33,6 +33,7 @@ function getS3Client(): S3Client {
   }
 
   try {
+    console.log('[S3_CONFIG] Initializing S3 client...');
     s3Client = new S3Client({
       region: process.env.AWS_S3_REGION!,
       credentials: {
@@ -40,6 +41,7 @@ function getS3Client(): S3Client {
         secretAccessKey: process.env.MY_AWS_SECRET_ACCESS_KEY!,
       },
     });
+    console.log('[S3_CONFIG] S3 client initialized successfully.');
     return s3Client;
   } catch (error: any) {
     const errorMsg = `Failed to initialize S3 client: ${error.message}`;
@@ -58,6 +60,7 @@ export async function uploadFileToS3(
   fileDataUri: string,
   fileName: string
 ) {
+  console.log(`[S3_UPLOAD] Starting upload for user: ${userId}, warranty: ${warrantyId}, file: ${fileName}`);
   const client = getS3Client();
 
   // Convert data URI to buffer
@@ -76,9 +79,10 @@ export async function uploadFileToS3(
 
   try {
     await client.send(new PutObjectCommand(params));
+    console.log(`[S3_UPLOAD_SUCCESS] File uploaded successfully. S3 Key: ${s3Key}`);
     return s3Key; // Return the key, not a public URL
   } catch (error: any) {
-    console.error('Error uploading to S3:', error);
+    console.error('[S3_UPLOAD_ERROR] Error uploading to S3:', error);
     const message =
       error.name === 'AccessDenied'
         ? 'Access Denied. Please check your S3 bucket permissions and IAM policy.'
@@ -93,6 +97,7 @@ export async function uploadFileToS3(
  * @returns A presigned URL valid for a limited time.
  */
 export async function getPresignedUrl(key: string) {
+  console.log(`[S3_PRESIGN] Generating presigned URL for key: ${key}`);
   const client = getS3Client();
 
   const command = new GetObjectCommand({
@@ -103,9 +108,10 @@ export async function getPresignedUrl(key: string) {
   try {
     // The URL will be valid for 15 minutes.
     const url = await getSignedUrl(client, command, {expiresIn: 900});
+    console.log(`[S3_PRESIGN_SUCCESS] Presigned URL generated for key: ${key}`);
     return url;
   } catch (error: any) {
-    console.error('Error generating presigned URL:', error);
+    console.error('[S3_PRESIGN_ERROR] Error generating presigned URL:', error);
     throw new Error('Could not generate file URL.');
   }
 }

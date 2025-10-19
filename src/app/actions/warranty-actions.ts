@@ -27,6 +27,7 @@ function getS3Client(): S3Client {
   }
 
   try {
+    console.log('[S3_CONFIG_WARRANTY_ACTIONS] Initializing S3 client...');
     s3Client = new S3Client({
       region: process.env.AWS_S3_REGION!,
       credentials: {
@@ -34,6 +35,7 @@ function getS3Client(): S3Client {
         secretAccessKey: process.env.MY_AWS_SECRET_ACCESS_KEY!,
       },
     });
+    console.log('[S3_CONFIG_WARRANTY_ACTIONS] S3 client initialized successfully.');
     return s3Client;
   } catch (error: any) {
     const errorMsg = `Failed to initialize S3 client for warranty actions: ${error.message}`;
@@ -46,6 +48,7 @@ function getS3Client(): S3Client {
 }
 
 async function deleteFileFromS3(key: string) {
+  console.log(`[S3_DELETE] Attempting to delete file from S3 with key: ${key}`);
   const client = getS3Client();
 
   const params = {
@@ -55,8 +58,9 @@ async function deleteFileFromS3(key: string) {
 
   try {
     await client.send(new DeleteObjectCommand(params));
+    console.log(`[S3_DELETE_SUCCESS] Successfully deleted file: ${key}`);
   } catch (error: any) {
-    console.error(`Failed to delete file ${key} from S3:`, error);
+    console.error(`[S3_DELETE_ERROR] Failed to delete file ${key} from S3:`, error);
     // We will not throw an error here, to allow the primary record deletion to proceed
     // even if S3 file deletion fails (e.g., due to permissions).
   }
@@ -71,6 +75,7 @@ export async function deleteWarrantyFiles({
   invoiceKey,
   warrantyCardKey,
 }: DeleteWarrantyFilesParams): Promise<{success: boolean; message: string}> {
+  console.log('[WARRANTY_ACTIONS] Starting deletion of associated files.');
   try {
     // The getS3Client call is now inside deleteFileFromS3
     if (invoiceKey) {
@@ -79,10 +84,11 @@ export async function deleteWarrantyFiles({
     if (warrantyCardKey) {
       await deleteFileFromS3(warrantyCardKey);
     }
-
+    
+    console.log('[WARRANTY_ACTIONS_SUCCESS] File deletion process completed.');
     return {success: true, message: 'Associated files deleted.'};
   } catch (error: any) {
-    console.error('Error deleting warranty files from S3:', error);
+    console.error('[WARRANTY_ACTIONS_ERROR] Error deleting warranty files from S3:', error);
     return {
       success: false,
       message:

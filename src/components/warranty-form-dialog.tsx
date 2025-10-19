@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, type ReactNode } from 'react';
@@ -84,6 +85,7 @@ export function WarrantyFormDialog({ children, warranty, onSave }: WarrantyFormD
       return;
     }
 
+    console.log('[AI_EXTRACTION] Starting AI document analysis...');
     setIsAiRunning(true);
     setAiWarning(null);
     setAiReasoning(null);
@@ -105,6 +107,8 @@ export function WarrantyFormDialog({ children, warranty, onSave }: WarrantyFormD
         warnShortWarranties({ invoiceDataUri, warrantyCardDataUri, productDescription: productName }),
       ]);
       
+      console.log('[AI_EXTRACTION_RESULT] Received AI results:', { warrantyResult, shortWarrantyResult });
+
       const parseDate = (dateString: string | undefined): Date | null => {
         if (!dateString) return null;
         let d = parse(dateString, 'yyyy-MM-dd', new Date());
@@ -148,12 +152,14 @@ export function WarrantyFormDialog({ children, warranty, onSave }: WarrantyFormD
         setAiWarning(shortWarrantyResult.warningMessage);
       }
 
+      console.log('[AI_EXTRACTION] AI analysis completed successfully.');
+
     } catch (error: any) {
       console.error('AI processing failed:', error);
       toast({
         variant: 'destructive',
         title: 'AI Analysis Failed',
-        description: error.message || 'Could not analyze the document. Please try again.',
+        description: error.message || 'Could not analyze the document. Please check server logs.',
       });
     } finally {
       setIsAiRunning(false);
@@ -170,6 +176,7 @@ export function WarrantyFormDialog({ children, warranty, onSave }: WarrantyFormD
       return;
     }
     
+    console.log('[WARRANTY_SAVE] Starting save process for warranty:', data.productName);
     setIsSaving(true);
     
     try {
@@ -177,19 +184,25 @@ export function WarrantyFormDialog({ children, warranty, onSave }: WarrantyFormD
         ? doc(db, 'warranties', warranty.id)
         : doc(collection(db, 'warranties'));
       
+      console.log(`[WARRANTY_SAVE] Using document ID: ${docRef.id}`);
+
       let invoiceKey = warranty?.invoiceKey;
       let warrantyCardKey = warranty?.warrantyCardKey;
 
       const invoiceFile = data.invoice?.[0];
       if (invoiceFile) {
+        console.log('[WARRANTY_SAVE] Uploading invoice file...');
         const dataUri = await fileToDataUri(invoiceFile);
         invoiceKey = await uploadFileToS3(user.uid, docRef.id, dataUri, invoiceFile.name);
+        console.log('[WARRANTY_SAVE] Invoice file uploaded. Key:', invoiceKey);
       }
       
       const warrantyCardFile = data.warrantyCard?.[0];
       if (warrantyCardFile) {
+        console.log('[WARRANTY_SAVE] Uploading warranty card file...');
         const dataUri = await fileToDataUri(warrantyCardFile);
         warrantyCardKey = await uploadFileToS3(user.uid, docRef.id, dataUri, warrantyCardFile.name);
+        console.log('[WARRANTY_SAVE] Warranty card file uploaded. Key:', warrantyCardKey);
       }
       
       const warrantyDataForDb = {
@@ -203,7 +216,9 @@ export function WarrantyFormDialog({ children, warranty, onSave }: WarrantyFormD
         warrantyCardKey: warrantyCardKey || null,
       };
       
+      console.log('[WARRANTY_SAVE] Saving warranty data to Firestore...');
       await setDoc(docRef, warrantyDataForDb, { merge: true });
+      console.log('[WARRANTY_SAVE] Firestore document saved successfully.');
       
       onSave();
       
@@ -212,11 +227,11 @@ export function WarrantyFormDialog({ children, warranty, onSave }: WarrantyFormD
       form.reset();
       
     } catch (error: any) {
-      console.error('Error saving warranty:', error);
+      console.error('[WARRANTY_SAVE_ERROR] Error saving warranty:', error);
       toast({
         variant: 'destructive',
         title: 'Save Failed',
-        description: error.message || 'There was an error saving your warranty.',
+        description: error.message || 'There was an error saving your warranty. Check console for details.',
       });
     } finally {
       setIsSaving(false);
