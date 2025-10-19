@@ -51,6 +51,7 @@ const DetectWarrantyPeriodOutputSchema = z.object({
 export type DetectWarrantyPeriodOutput = z.infer<typeof DetectWarrantyPeriodOutputSchema>;
 
 export async function detectWarrantyPeriod(input: DetectWarrantyPeriodInput): Promise<DetectWarrantyPeriodOutput> {
+  console.log('[AI_FLOW_START] Starting detectWarrantyPeriod flow...');
   if (!process.env.GOOGLE_API_KEY) {
     console.error('[AI_FLOW_ERROR] The GOOGLE_API_KEY is not configured on the server.');
     throw new Error('The AI service is not configured on the server. Please contact support.');
@@ -91,9 +92,12 @@ const detectWarrantyPeriodFlow = ai.defineFlow(
     outputSchema: DetectWarrantyPeriodOutputSchema,
   },
   async input => {
+    console.log('[AI_FLOW_RUN] Executing detectWarrantyPeriodFlow with prompt...');
     const {output} = await detectWarrantyPeriodPrompt(input);
+    console.log('[AI_FLOW_RESULT] Received output from prompt:', output);
 
     if (!output) {
+      console.warn('[AI_FLOW_WARN] AI analysis returned a null or undefined result.');
       return {
         confidenceScore: 0,
         reasoning:
@@ -101,6 +105,7 @@ const detectWarrantyPeriodFlow = ai.defineFlow(
       };
     }
     
+    console.log('[AI_FLOW_SUCCESS] detectWarrantyPeriodFlow completed successfully.');
     return output;
   }
 );

@@ -44,6 +44,7 @@ export type WarnShortWarrantiesOutput = z.infer<typeof WarnShortWarrantiesOutput
 export async function warnShortWarranties(
   input: WarnShortWarrantiesInput
 ): Promise<WarnShortWarrantiesOutput> {
+  console.log('[AI_FLOW_START] Starting warnShortWarranties flow...');
   if (!process.env.GOOGLE_API_KEY) {
     console.error('[AI_FLOW_ERROR] The GOOGLE_API_KEY is not configured on the server.');
     throw new Error('The AI service is not configured on the server. Please contact support.');
@@ -75,13 +76,17 @@ const warnShortWarrantiesFlow = ai.defineFlow(
     outputSchema: WarnShortWarrantiesOutputSchema,
   },
   async input => {
+    console.log('[AI_FLOW_RUN] Executing warnShortWarrantiesFlow with prompt...');
     const {output} = await prompt(input);
+    console.log('[AI_FLOW_RESULT] Received output from prompt:', output);
     if (!output) {
+      console.warn('[AI_FLOW_WARN] AI analysis returned a null or undefined result.');
       return {
         isShortWarranty: false,
         warningMessage: 'Could not analyze document to check for a short warranty.',
       };
     }
+    console.log('[AI_FLOW_SUCCESS] warnShortWarrantiesFlow completed successfully.');
     return output;
   }
 );
