@@ -42,7 +42,7 @@ function getS3Client(): S3Client {
     return s3Client;
   } catch (error: any) {
     const errorMsg = `Failed to initialize S3 client: ${error.message}`;
-    console.error(`[S3_CONFIG_ERROR] ${errorMsg}`);
+    console.error(`[S3_CONFIG_ERROR] ${errorMsg}`, error);
     throw new Error(errorMsg);
   }
 }
@@ -103,7 +103,7 @@ export async function getPresignedUrl(key: string) {
     // The URL will be valid for 15 minutes.
     const url = await getSignedUrl(client, command, {expiresIn: 900});
     return url;
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error generating presigned URL:', error);
     throw new Error('Could not generate file URL.');
   }

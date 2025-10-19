@@ -37,7 +37,8 @@ function getS3Client(): S3Client {
   } catch (error: any) {
     const errorMsg = `Failed to initialize S3 client for warranty actions: ${error.message}`;
     console.error(
-      `[S3_CONFIG_ERROR] S3 client failed to initialize for warranty actions. ${errorMsg}`
+      `[S3_CONFIG_ERROR] S3 client failed to initialize for warranty actions. ${errorMsg}`,
+       error
     );
     throw new Error(errorMsg);
   }
@@ -53,7 +54,7 @@ async function deleteFileFromS3(key: string) {
 
   try {
     await client.send(new DeleteObjectCommand(params));
-  } catch (error) {
+  } catch (error: any) {
     console.error(`Failed to delete file ${key} from S3:`, error);
     // We will not throw an error here, to allow the primary record deletion to proceed
     // even if S3 file deletion fails (e.g., due to permissions).
